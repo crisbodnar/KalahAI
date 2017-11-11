@@ -1,0 +1,73 @@
+GAME ENGINE
+===========
+
+
+Behavioural & Architectural Requirements:
+
+REQ1: The engine lets two agents play Kalah (including the pie rule - aka. swap
+      rule) against each other.
+REQ2: The engine surveils the rules of the game.
+REQ3a: The engine starts the agent applications (given as command line
+      arguments).
+REQ3b: The engine interacts with the agents via standard input/output.
+      {note: This allows language independence. Also, the students can be given
+      the game engine and a reference agent for testing purposes in executable
+      form, without providing the code [of the reference implementation].}
+REQ4: Each agent has a time limit per game. The engine enforces it by timeouts.
+      {note: It is hard to say what clock/time measure we should be using.}
+REQ5: The engine measures the average response time of each agent.
+      {note: Agents that do speculative calculations during the opponent's turn
+      shall be rewarded.}
+      {PROBLEM: An evil agent can attack its opponent by using a lot of CPU
+      while it's idle.}
+REQ6: Initially (at the beginning of a match), there's the same amount of seeds
+      in each hole of the board.
+
+
+-------------
+
+Possible Errors:
+
+ERR1: agent times out -> it looses the match
+ERR2: illegal move -> agent looses the match
+ERR3: illegal communication (wrong protocol) -> agent looses match
+ERR4: agent disconnects -> agent looses match
+
+
+-------------
+
+Possible Outcomes of a Match:
+
+- one player wins regularly (with a certain score)
+- draw (score ?)
+- timeout of a player (ERR1) -> player looses (score ?)
+- illegal move of a player (ERR2) -> player looses (score ?)
+- illegal communication of a player (ERR3) -> player looses (score ?)
+- agent disconnects (ERR4) -> player looses (score ?)
+
+
+-------------
+
+Statistics About an Agent's Matches:
+
+- number of matches won
+- score ?
+- average response time per move/match ?
+- average number of moves per (won) match ?
+- number of timeouts ?
+
+
+-> Information for a Match:
+
+- agents that played (first player, second player)
+- outcome:
+  - regular win-loose/draw/timeout/illegal move/illegal communication/disconnect
+  - score (if appropriate)
+- number of moves for each player
+- time of all moves for each player
+
+
+-> Information for a Player:
+
+- time of all moves
+- number of moves
