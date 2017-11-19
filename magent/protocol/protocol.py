@@ -98,7 +98,7 @@ class Protocol(object):
         # 2nd argument: the board
         board_parts = msg_parts[2].split(',', -1)
 
-        if 2 * board.holes + 1 != len(board_parts):
+        if 2 * (board.holes + 1) != len(board_parts):
             raise InvalidMessageException("Board dimensions in message ("
                                           + str(len(board_parts)) + " entries) are not as expected ("
                                           + 2 * (board.holes() + 1) + " entries).")
@@ -109,9 +109,9 @@ class Protocol(object):
                 # holes on the south side
                 board.set_seeds(Side.SOUTH, i + 1, int(board_parts[i + int(board.holes) + 1]))
             # northern store
-            board.add_seeds_to_store(Side.NORTH, int(board_parts[board.holes]))
+            board.set_seeds_in_store(Side.NORTH, int(board_parts[board.holes]))
             # southern store
-            board.add_seeds_to_store(Side.SOUTH, int(board_parts[2 * board.holes + 1]))
+            board.set_seeds_in_store(Side.SOUTH, int(board_parts[2 * board.holes + 1]))
         except ValueError as e:
             raise InvalidMessageException("Illegal value for seed count: " + str(e))
         except Exception as e:

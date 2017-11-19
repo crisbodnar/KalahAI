@@ -14,7 +14,7 @@ class Board(object):
         self._holes = holes
 
         # Place the seeds in the holes
-        self.board = 2 * [[0] * (holes + 1)]
+        self.board = [[0] * (holes + 1) for i in range(2)]
         for hole in range(1, holes + 1):
             self.board[NORTH_ROW][hole] = seeds
             self.board[SOUTH_ROW][hole] = seeds
@@ -66,7 +66,26 @@ class Board(object):
         self.board[Side.get_index(side)][hole] += seeds
 
     def add_seeds_to_store(self, side: Side, seeds: int):
-        self.add_seeds(side, 0, seeds)
+        if seeds < 0:
+            raise ValueError('There has to be a non-negative number of seeds')
+        self.board[Side.get_index(side)][0] += seeds
+
+    def set_seeds_in_store(self, side: Side, seeds: int):
+        if seeds < 0:
+            raise ValueError('There has to be a non-negative number of seeds')
+        self.board[Side.get_index(side)][0] = seeds
 
     def get_seeds_in_store(self, side: Side):
         return self.board[Side.get_index(side)][0]
+
+    def __str__(self):
+        board_str = str(self.board[NORTH_ROW][0]) + " --"
+        for i in range(self.holes, 0, -1):
+            board_str += " " + str(self.board[NORTH_ROW][i])
+        board_str += "\n"
+
+        for i in range(1, self.holes + 1, 1):
+            board_str += " " + str(self.board[SOUTH_ROW][i])
+        board_str += " --  " + str(self.board[SOUTH_ROW][0]) + "\n"
+
+        return board_str
