@@ -3,16 +3,20 @@ from magent.move import Move
 from magent.side import Side
 
 
+# TODO(cristian): Does this have to be a class?
+# seems like a collection of game rules, otherwise reformat functions to use self.board
 class Mancala(object):
-    def __init__(self, board: Board):
-        self._board = board
-
-    @property
-    def board(self):
-        return self._board
+    @staticmethod
+    # Generate a set of all legal moves given a board state and a side
+    def get_legal_moves(board: Board, side: Side):
+        possible_moves = []
+        for i in range(1, board.holes + 1):
+            if board.board[side.get_index(side)][i] > 0:
+                possible_moves.append(i)
+        return possible_moves
 
     @staticmethod
-    def legal_move(board: Board, move: Move):
+    def is_legal_move(board: Board, move: Move):
         return (move.hole <= board.holes) and (board.get_seeds(move.side, move.hole) != 0)
 
     @staticmethod
@@ -32,7 +36,7 @@ class Mancala(object):
 
     @staticmethod
     def make_move(board: Board, move: Move):
-        if not Mancala.legal_move(board, move):
+        if not Mancala.is_legal_move(board, move):
             raise ValueError('Move is illegal')
 
         seeds_to_sow = board.get_seeds(move.side, move.hole)
@@ -72,8 +76,9 @@ class Mancala(object):
 
         # Capture the opponent's seeds from the opposite hole if the last seed
         # is placed in an empty hole and there are seeds in the opposite hole
-        if sow_side == move.side and sow_hole > 0 and board.get_seeds(sow_side, sow_hole) and \
-           board.get_seeds_op(sow_side, sow_hole) > 0:
+        if sow_side == move.side and sow_hole > 0 \
+                and board.get_seeds(sow_side, sow_hole) \
+                and board.get_seeds_op(sow_side, sow_hole) > 0:
             board.add_seeds_to_store(move.side, 1 + board.get_seeds_op(sow_side, sow_hole))
             board.set_seeds(move.side, sow_hole, 0)
             board.set_seeds_op(move.side, sow_hole, 0)
@@ -90,8 +95,5 @@ class Mancala(object):
 
         # Return the side which is next to move
         if sow_hole is 0:
-            return move.side # Last seed was placed in the store, so side moves again
+            return move.side  # Last seed was placed in the store, so side moves again
         return Side.opposite(move.side)
-
-    def is_legal_move(self, move: Move):
-        return Mancala.legal_move(self._board, move)

@@ -15,8 +15,8 @@ class Main(object):
     """
 
     @staticmethod
-    def send_msg(msg: str):
-        print(msg)
+    def send_msg(message: str):
+        print(message)
         sys.stdout.flush()
 
     """
@@ -29,9 +29,7 @@ class Main(object):
 
     @staticmethod
     def recv_msg():
-        line = sys.stdin.readline()
-
-        return line
+        return sys.stdin.readline()
 
 
 if __name__ == '__main__':
