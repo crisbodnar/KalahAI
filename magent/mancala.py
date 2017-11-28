@@ -13,7 +13,7 @@ class MancalaGameState(object):
 
     @classmethod
     def clone(cls, other_state):
-        board = deepcopy(other_state.board)
+        board = Board.from_board(other_state.board)
         side_to_move = deepcopy(other_state.side_to_move)
         north_moved = deepcopy(other_state.north_moved)
 
@@ -90,12 +90,12 @@ class MancalaGameState(object):
         # Place seeds in all holes excepting the opponent's store
         receiving_holes = 2 * holes + 1
         # Rounds needed to sow all the seeds
-        rounds = seeds_to_sow / receiving_holes
+        rounds = seeds_to_sow // receiving_holes
         # Seeds remaining after all the rounds
         remaining_seeds = seeds_to_sow % receiving_holes
 
         # Sow the seeds for the full rounds
-        if rounds != 0:
+        if rounds is not 0:
             for hole in range(1, holes + 1):
                 board.add_seeds(Side.NORTH, hole, rounds)
                 board.add_seeds(Side.SOUTH, hole, rounds)
