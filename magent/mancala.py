@@ -66,7 +66,7 @@ class MancalaGameState(object):
         :return: The winning Side of the game or none if there is a tie.
         """
         game_over, finished_side = self.is_game_over()
-        if game_over is False:
+        if not game_over:
             raise ValueError('This method should be called only when the game is over')
 
         not_finished_side = Side.opposite(finished_side)
