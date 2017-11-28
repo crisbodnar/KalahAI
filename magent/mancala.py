@@ -61,14 +61,25 @@ class MancalaGameState(object):
     def is_game_over(self) -> (bool, Side):
         return MancalaGameState.game_over(self.board)
 
-    def get_winner(self):
+    def get_winner(self) -> Side or None:
+        """
+        :return: The winning Side of the game or none if there is a tie.
+        """
         game_over, finished_side = self.is_game_over()
         if game_over is False:
             raise ValueError('This method should be called only when the game is over')
 
         not_finished_side = Side.opposite(finished_side)
-        seeds_outside_store = 0
-        for hole in
+        not_finished_side_seeds = self.board.get_seeds_in_store(not_finished_side)
+        for hole in range(1, self.board.holes + 1):
+            not_finished_side_seeds += self.board.get_seeds(not_finished_side, hole)
+        finished_side_seeds = self.board.get_seeds_in_store(finished_side)
+
+        if finished_side_seeds > not_finished_side_seeds:
+            return finished_side
+        elif finished_side_seeds < not_finished_side_seeds:
+            return not_finished_side
+        return None
 
     # Generate a set of all legal moves given a board state and a side
     @staticmethod
