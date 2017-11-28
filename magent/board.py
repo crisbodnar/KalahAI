@@ -14,7 +14,7 @@ class Board(object):
         self._holes = holes
 
         # Place the seeds in the holes
-        self.board = [[0] * (holes + 1) for i in range(2)]
+        self.board = [[0] * (holes + 1) for _ in range(2)]
         for hole in range(1, holes + 1):
             self.board[NORTH_ROW][hole] = seeds
             self.board[SOUTH_ROW][hole] = seeds

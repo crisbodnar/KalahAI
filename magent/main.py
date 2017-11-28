@@ -47,7 +47,7 @@ if __name__ == '__main__':
                     print("A state.")
                     board = Board(7, 7)
                     move_turn = Protocol.interpret_state_msg(msg, board)
-                    print("This was the move: ", move_turn.move)
+                    print("This was the move: ", move_turn.index)
                     print("Is the game over? ", move_turn.end)
                     if not move_turn.end:
                         print("Is it our turn again? " + str(move_turn.again))
