@@ -7,17 +7,41 @@ from typing import List
 
 class MancalaGameState(object):
     def __init__(self):
-        self.board = Board(7, 7)
-        self.side_to_move = Side.SOUTH
-        self.north_moved = False
+        self._board = Board(7, 7)
+        self._side_to_move = Side.SOUTH
+        self._north_moved = False
 
-    @classmethod
-    def clone(cls, other_state):
-        board = Board.from_board(other_state.board)
+    @property
+    def board(self):
+        return self._board
+
+    @board.setter
+    def board(self, board: Board):
+        self._board = board
+
+    @property
+    def side_to_move(self):
+        return self._side_to_move
+
+    @side_to_move.setter
+    def side_to_move(self, side: Side):
+        self._side_to_move = side
+
+    @property
+    def north_moved(self):
+        return self._north_moved
+
+    @north_moved.setter
+    def north_moved(self, moved: bool):
+        self._north_moved = moved
+
+    @staticmethod
+    def clone(other_state):
+        board = Board.clone(other_state.board)
         side_to_move = deepcopy(other_state.side_to_move)
         north_moved = deepcopy(other_state.north_moved)
 
-        clone_game = cls()
+        clone_game = MancalaGameState()
         clone_game.board = board
         clone_game.side_to_move = side_to_move
         clone_game.north_moved = north_moved
@@ -36,6 +60,26 @@ class MancalaGameState(object):
 
     def is_game_over(self) -> (bool, Side):
         return MancalaGameState.game_over(self.board)
+
+    def get_winner(self) -> Side or None:
+        """
+        :return: The winning Side of the game or none if there is a tie.
+        """
+        game_over, finished_side = self.is_game_over()
+        if not game_over:
+            raise ValueError('This method should be called only when the game is over')
+
+        not_finished_side = Side.opposite(finished_side)
+        not_finished_side_seeds = self.board.get_seeds_in_store(not_finished_side)
+        for hole in range(1, self.board.holes + 1):
+            not_finished_side_seeds += self.board.get_seeds(not_finished_side, hole)
+        finished_side_seeds = self.board.get_seeds_in_store(finished_side)
+
+        if finished_side_seeds > not_finished_side_seeds:
+            return finished_side
+        elif finished_side_seeds < not_finished_side_seeds:
+            return not_finished_side
+        return None
 
     # Generate a set of all legal moves given a board state and a side
     @staticmethod
@@ -62,6 +106,10 @@ class MancalaGameState(object):
 
     @staticmethod
     def game_over(board: Board):
+        """
+        :param board: The board to be analysed
+        :return: True if the game is over and the side which finished
+        """
         if MancalaGameState.holes_empty(board, Side.SOUTH):
             return True, Side.SOUTH
         if MancalaGameState.holes_empty(board, Side.NORTH):

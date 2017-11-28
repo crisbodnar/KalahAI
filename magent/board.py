@@ -1,9 +1,6 @@
 from magent.side import Side
 from copy import deepcopy
 
-NORTH_ROW = 0
-SOUTH_ROW = 1
-
 
 class Board(object):
     def __init__(self, holes: int, seeds: int):
@@ -17,16 +14,19 @@ class Board(object):
         # Place the seeds in the holes
         self.board = [[0 for _ in range(holes + 1)] for _ in range(2)]
         for hole in range(1, holes + 1):
-            self.board[NORTH_ROW][hole] = seeds
-            self.board[SOUTH_ROW][hole] = seeds
+            self.board[Side.get_index(Side.NORTH)][hole] = seeds
+            self.board[Side.get_index(Side.SOUTH)][hole] = seeds
 
     @classmethod
-    def from_board(cls, original_board):
+    def clone(cls, original_board):
         holes = original_board.holes
         board = cls(holes, 0)
         for hole in range(1, holes + 1):
-            board.board[NORTH_ROW][hole] = deepcopy(original_board.board[NORTH_ROW][hole])
-            board.board[SOUTH_ROW][hole] = deepcopy(original_board.board[SOUTH_ROW][hole])
+            board.board[Side.get_index(Side.NORTH)][hole] \
+                = deepcopy(original_board.board[Side.get_index(Side.NORTH)][hole])
+            board.board[Side.get_index(Side.SOUTH)][hole] \
+                = deepcopy(original_board.board[Side.get_index(Side.SOUTH)][hole])
+        return board
 
     @property
     def holes(self):
@@ -80,13 +80,13 @@ class Board(object):
         return self.board[Side.get_index(side)][0]
 
     def __str__(self):
-        board_str = str(self.board[NORTH_ROW][0]) + " --"
+        board_str = str(self.board[Side.get_index(Side.NORTH)][0]) + " --"
         for i in range(self.holes, 0, -1):
-            board_str += " " + str(self.board[NORTH_ROW][i])
+            board_str += " " + str(self.board[Side.get_index(Side.NORTH)][i])
         board_str += "\n"
 
         for i in range(1, self.holes + 1, 1):
-            board_str += " " + str(self.board[SOUTH_ROW][i])
-        board_str += " --  " + str(self.board[SOUTH_ROW][0]) + "\n"
+            board_str += " " + str(self.board[Side.get_index(Side.SOUTH)][i])
+        board_str += " --  " + str(self.board[Side.get_index(Side.SOUTH)][0]) + "\n"
 
         return board_str
