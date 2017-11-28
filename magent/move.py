@@ -2,17 +2,18 @@ from magent.side import Side
 
 
 class Move(object):
-    def __init__(self, side: Side, hole: int):
-        if hole < 1:
-            raise ValueError('Hole number must be strictly greater than 0')
+    # Move represents a whole (if greater than 1) or the pie action if 0.
+    def __init__(self, side: Side, index: int):
+        if index < 0:
+            raise ValueError('Move number must be strictly greater than 0')
 
         self._side = side
-        self._hole = hole
+        self._index = index
 
     @property
     def side(self):
         return self._side
 
     @property
-    def hole(self):
-        return self._hole
+    def index(self):
+        return self._index

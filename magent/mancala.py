@@ -1,23 +1,57 @@
 from magent.board import Board
 from magent.move import Move
 from magent.side import Side
+from copy import deepcopy
+from typing import List
 
 
-# TODO(cristian): Does this have to be a class?
-# seems like a collection of game rules, otherwise reformat functions to use self.board
-class Mancala(object):
-    @staticmethod
+class MancalaGameState(object):
+    def __init__(self):
+        self.board = Board(7, 7)
+        self.side_to_move = Side.SOUTH
+        self.north_moved = False
+
+    @classmethod
+    def clone(cls, other_state):
+        board = deepcopy(other_state.board)
+        side_to_move = deepcopy(other_state.side_to_move)
+        north_moved = deepcopy(other_state.north_moved)
+
+        clone_game = cls()
+        clone_game.board = board
+        clone_game.side_to_move = side_to_move
+        clone_game.north_moved = north_moved
+        return clone_game
+
+    def get_legal_moves(self) -> List[Move]:
+        return MancalaGameState.get_state_legal_moves(self.board, self.side_to_move, self.north_moved)
+
+    def is_legal(self, move: Move) -> bool:
+        return MancalaGameState.is_legal_move(self.board, move, self.north_moved)
+
+    def perform_move(self, move: Move):
+        self.side_to_move = MancalaGameState.make_move(self.board, move, self.north_moved)
+        if move.side is Side.NORTH:
+            self.north_moved = True
+
+    def is_game_over(self) -> (bool, Side):
+        return MancalaGameState.game_over(self.board)
+
     # Generate a set of all legal moves given a board state and a side
-    def get_legal_moves(board: Board, side: Side):
-        possible_moves = []
+    @staticmethod
+    def get_state_legal_moves(board: Board, side: Side, north_moved: bool) -> List[Move]:
+        # If this is the first move of NORTH, then NORTH can use the pie rule action
+        legal_moves = [] if north_moved or side is side.SOUTH else [Move(side, 0)]
         for i in range(1, board.holes + 1):
             if board.board[side.get_index(side)][i] > 0:
-                possible_moves.append(i)
-        return possible_moves
+                legal_moves.append(Move(side, i))
+        return legal_moves
 
     @staticmethod
-    def is_legal_move(board: Board, move: Move):
-        return (move.hole <= board.holes) and (board.get_seeds(move.side, move.hole) != 0)
+    def is_legal_move(board: Board, move: Move, north_moved: bool) -> bool:
+        if move.index is 0 and north_moved:
+            return False
+        return (move.index >= 1) and (move.index <= board.holes) and (board.get_seeds(move.side, move.index) != 0)
 
     @staticmethod
     def holes_empty(board: Board, side: Side):
@@ -28,19 +62,29 @@ class Mancala(object):
 
     @staticmethod
     def game_over(board: Board):
-        if Mancala.holes_empty(board, Side.SOUTH):
+        if MancalaGameState.holes_empty(board, Side.SOUTH):
             return True, Side.SOUTH
-        if Mancala.holes_empty(board, Side.NORTH):
+        if MancalaGameState.holes_empty(board, Side.NORTH):
             return True, Side.NORTH
         return False, None
 
     @staticmethod
-    def make_move(board: Board, move: Move):
-        if not Mancala.is_legal_move(board, move):
+    def switch_sides(board: Board):
+        for hole in range(board.holes + 1):
+            board.board[0][hole], board.board[1][hole] = board.board[1][hole], board.board[0][hole]
+
+    @staticmethod
+    def make_move(board: Board, move: Move, north_moved):
+        if not MancalaGameState.is_legal_move(board, move, north_moved):
             raise ValueError('Move is illegal')
 
-        seeds_to_sow = board.get_seeds(move.side, move.hole)
-        board.set_seeds(move.side, move.hole, 0)
+        # This is a pie move
+        if move.index is 0:
+            MancalaGameState.switch_sides(board)
+            return Side.opposite(move.side)
+
+        seeds_to_sow = board.get_seeds(move.side, move.index)
+        board.set_seeds(move.side, move.index, 0)
 
         holes = board.holes
         # Place seeds in all holes excepting the opponent's store
@@ -59,7 +103,7 @@ class Mancala(object):
 
         # Sow the remaining seeds
         sow_side = move.side
-        sow_hole = move.hole
+        sow_hole = move.index
         for _ in range(remaining_seeds):
             sow_hole += 1
             if sow_hole == 1:
@@ -84,7 +128,7 @@ class Mancala(object):
             board.set_seeds_op(move.side, sow_hole, 0)
 
         # If the game is over, collect the seeds not in the store and put them there
-        game_over, finished_side = Mancala.game_over(board)
+        game_over, finished_side = MancalaGameState.game_over(board)
         if game_over:
             seeds = 0
             collecting_side = Side.opposite(finished_side)
