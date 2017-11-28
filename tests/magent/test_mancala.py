@@ -45,3 +45,17 @@ class TestMancalaGameState(unittest.TestCase):
         self.assertEqual(self.game.board.get_seeds(Side.SOUTH, 1), 8)
         self.assertEqual(self.game.board.get_seeds(Side.SOUTH, 2), 8)
         self.assertEqual(self.game.board.get_seeds(Side.SOUTH, 3), 8)
+
+    def test_game_is_over_returns_false(self):
+        game_over, winning_side = self.game.is_game_over()
+        self.assertFalse(game_over)
+        self.assertEqual(winning_side, None)
+
+    def test_game_is_over_returns_true(self):
+        board = self.game.board
+        for hole in range(1, board.holes + 1):
+            board.set_seeds(Side.SOUTH, hole, 0)
+        board.set_seeds_in_store(Side.SOUTH, 49)
+        game_over, winning_side = self.game.is_game_over()
+        self.assertTrue(game_over)
+        self.assertEqual(winning_side, Side.SOUTH)

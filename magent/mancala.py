@@ -35,13 +35,13 @@ class MancalaGameState(object):
     def north_moved(self, moved: bool):
         self._north_moved = moved
 
-    @classmethod
-    def clone(cls, other_state):
-        board = Board.from_board(other_state.board)
+    @staticmethod
+    def clone(other_state):
+        board = Board.clone(other_state.board)
         side_to_move = deepcopy(other_state.side_to_move)
         north_moved = deepcopy(other_state.north_moved)
 
-        clone_game = cls()
+        clone_game = MancalaGameState()
         clone_game.board = board
         clone_game.side_to_move = side_to_move
         clone_game.north_moved = north_moved
@@ -60,6 +60,15 @@ class MancalaGameState(object):
 
     def is_game_over(self) -> (bool, Side):
         return MancalaGameState.game_over(self.board)
+
+    def get_winner(self):
+        game_over, finished_side = self.is_game_over()
+        if game_over is False:
+            raise ValueError('This method should be called only when the game is over')
+
+        not_finished_side = Side.opposite(finished_side)
+        seeds_outside_store = 0
+        for hole in
 
     # Generate a set of all legal moves given a board state and a side
     @staticmethod
@@ -86,6 +95,10 @@ class MancalaGameState(object):
 
     @staticmethod
     def game_over(board: Board):
+        """
+        :param board: The board to be analysed
+        :return: True if the game is over and the side which finished
+        """
         if MancalaGameState.holes_empty(board, Side.SOUTH):
             return True, Side.SOUTH
         if MancalaGameState.holes_empty(board, Side.NORTH):

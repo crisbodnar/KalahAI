@@ -18,7 +18,7 @@ class Board(object):
             self.board[Side.get_index(Side.SOUTH)][hole] = seeds
 
     @classmethod
-    def from_board(cls, original_board):
+    def clone(cls, original_board):
         holes = original_board.holes
         board = cls(holes, 0)
         for hole in range(1, holes + 1):
@@ -26,6 +26,7 @@ class Board(object):
                 = deepcopy(original_board.board[Side.get_index(Side.NORTH)][hole])
             board.board[Side.get_index(Side.SOUTH)][hole] \
                 = deepcopy(original_board.board[Side.get_index(Side.SOUTH)][hole])
+        return board
 
     @property
     def holes(self):
