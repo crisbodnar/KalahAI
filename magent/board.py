@@ -1,4 +1,5 @@
 from magent.side import Side
+from copy import deepcopy
 
 NORTH_ROW = 0
 SOUTH_ROW = 1
@@ -14,7 +15,7 @@ class Board(object):
         self._holes = holes
 
         # Place the seeds in the holes
-        self.board = [[0] * (holes + 1) for _ in range(2)]
+        self.board = [[0 for _ in range(holes + 1)] for _ in range(2)]
         for hole in range(1, holes + 1):
             self.board[NORTH_ROW][hole] = seeds
             self.board[SOUTH_ROW][hole] = seeds
@@ -24,14 +25,14 @@ class Board(object):
         holes = original_board.holes
         board = cls(holes, 0)
         for hole in range(1, holes + 1):
-            board.board[NORTH_ROW][hole] = original_board.board[NORTH_ROW][hole]
-            board.board[SOUTH_ROW][hole] = original_board.board[SOUTH_ROW][hole]
+            board.board[NORTH_ROW][hole] = deepcopy(original_board.board[NORTH_ROW][hole])
+            board.board[SOUTH_ROW][hole] = deepcopy(original_board.board[SOUTH_ROW][hole])
 
     @property
     def holes(self):
         return self._holes
 
-    def get_seeds(self, side: Side, hole: int):
+    def get_seeds(self, side: Side, hole: int) -> int:
         if hole < 1 or hole > self.holes:
             raise ValueError('Hole number must be between 1 and number of holes')
         return self.board[Side.get_index(side)][hole]

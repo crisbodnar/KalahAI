@@ -7,12 +7,12 @@ class Side(Enum):
 
     @staticmethod
     def get_index(side):
-        if side == side.NORTH:
+        if side is side.NORTH:
             return 0
         return 1
 
     @staticmethod
     def opposite(side):
-        if side == side.NORTH:
+        if side is side.NORTH:
             return side.SOUTH
         return side.NORTH
