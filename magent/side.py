@@ -1,18 +1,21 @@
 from enum import Enum
 
+NORTH_INDEX = 0
+SOUTH_INDEX = 1
+
 
 class Side(Enum):
     NORTH = 0
     SOUTH = 1
 
     @staticmethod
-    def get_index(side):
+    def get_index(side) -> int:
         if side is side.NORTH:
-            return 0
-        return 1
+            return NORTH_INDEX
+        return SOUTH_INDEX
 
-    @staticmethod
-    def opposite(side):
+    @classmethod
+    def opposite(cls, side):
         if side is side.NORTH:
             return side.SOUTH
         return side.NORTH

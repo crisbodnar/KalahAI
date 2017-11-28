@@ -7,9 +7,33 @@ from typing import List
 
 class MancalaGameState(object):
     def __init__(self):
-        self.board = Board(7, 7)
-        self.side_to_move = Side.SOUTH
-        self.north_moved = False
+        self._board = Board(7, 7)
+        self._side_to_move = Side.SOUTH
+        self._north_moved = False
+
+    @property
+    def board(self):
+        return self._board
+
+    @board.setter
+    def board(self, board: Board):
+        self._board = board
+
+    @property
+    def side_to_move(self):
+        return self._side_to_move
+
+    @side_to_move.setter
+    def side_to_move(self, side: Side):
+        self._side_to_move = side
+
+    @property
+    def north_moved(self):
+        return self._north_moved
+
+    @north_moved.setter
+    def north_moved(self, moved: bool):
+        self._north_moved = moved
 
     @classmethod
     def clone(cls, other_state):
