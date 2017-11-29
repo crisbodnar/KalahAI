@@ -14,17 +14,16 @@ class PolicyGradientTrainer(object):
     def policy_rollout(self):
         # Reset the environment to make sure everything starts in a clean state.
         self.env.reset()
-
         while not self.env.is_game_over():
-            state = self.env.board.board
+            state = self.env.board.get_board_image()
             if self.env.side_to_move is Side.SOUTH:
-                valid_actions_mask = self.env.get_valid_actions_mask(self.env.get_legal_moves())
-                action = self.south.sample_action(np.array(self.env.board.board), valid_actions_mask)
+                valid_actions_mask = self.env.get_valid_actions_mask()
+                action = self.south.sample_action(np.array(state), valid_actions_mask)
                 reward = self.env.perform_move(Move(Side.SOUTH, action))
                 self.south.store_rollout(state, action, reward, valid_actions_mask)
             else:
-                valid_actions_mask = self.env.get_valid_actions_mask(self.env.get_legal_moves())
-                action = self.north.sample_action(np.array(self.env.board.board), valid_actions_mask)
+                valid_actions_mask = self.env.get_valid_actions_mask()
+                action = self.north.sample_action(state, valid_actions_mask)
                 reward = self.env.perform_move(Move(Side.NORTH, action))
                 self.north.store_rollout(state, action, reward, valid_actions_mask)
 

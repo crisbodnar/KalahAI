@@ -8,7 +8,9 @@ import numpy as np
 
 class MancalaEnv(object):
     def __init__(self):
-        self.reset()
+        self._board = Board(7, 7)
+        self._side_to_move = Side.SOUTH
+        self._north_moved = False
 
     @property
     def board(self):
@@ -35,9 +37,9 @@ class MancalaEnv(object):
         self._north_moved = moved
 
     def reset(self):
-        self._board = Board(7, 7)
-        self._side_to_move = Side.SOUTH
-        self._north_moved = False
+        self.board = Board(7, 7)
+        self.side_to_move = Side.SOUTH
+        self.north_moved = False
 
     @staticmethod
     def clone(other_state):
@@ -72,23 +74,23 @@ class MancalaEnv(object):
         reward = self.board.get_seeds_in_store(Side.NORTH) - self.board.get_seeds_in_store(Side.SOUTH)
         return reward if side is Side.NORTH else -reward
 
-    def is_game_over(self) -> (bool, Side):
+    def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)
 
-    def get_valid_actions_mask(self, valid_actions: np.array):
+    def get_valid_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = np.zeros(8)
-        for action in valid_actions:
-            mask[action] = 1
-        return mask
+        mask = [0.0 for _ in range(self.board.holes + 1)]
+        for action in self.get_legal_moves():
+            mask[action.index] = 1.0
+        return np.array(mask)
 
     def get_winner(self) -> Side or None:
         """
         :return: The winning Side of the game or none if there is a tie.
         """
-        game_over, finished_side = self.is_game_over()
-        if not game_over:
+        if not self.is_game_over():
             raise ValueError('This method should be called only when the game is over')
+        finished_side = Side.NORTH if MancalaEnv.holes_empty(self.board, Side.NORTH) else Side.SOUTH
 
         not_finished_side = Side.opposite(finished_side)
         not_finished_side_seeds = self.board.get_seeds_in_store(not_finished_side)
@@ -132,10 +134,10 @@ class MancalaEnv(object):
         :return: True if the game is over and the side which finished
         """
         if MancalaEnv.holes_empty(board, Side.SOUTH):
-            return True, Side.SOUTH
+            return True
         if MancalaEnv.holes_empty(board, Side.NORTH):
-            return True, Side.NORTH
-        return False, None
+            return True
+        return False
 
     @staticmethod
     def switch_sides(board: Board):
@@ -145,7 +147,8 @@ class MancalaEnv(object):
     @staticmethod
     def make_move(board: Board, move: Move, north_moved):
         if not MancalaEnv.is_legal_move(board, move, north_moved):
-            raise ValueError('Move is illegal')
+
+            raise ValueError('Move is illegal: Board: \n {} \n Move:\n {}/{}'.format(board, move.index, move.side))
 
         # This is a pie move
         if move.index is 0:
@@ -197,8 +200,9 @@ class MancalaEnv(object):
             board.set_seeds_op(move.side, sow_hole, 0)
 
         # If the game is over, collect the seeds not in the store and put them there
-        game_over, finished_side = MancalaEnv.game_over(board)
+        game_over = MancalaEnv.game_over(board)
         if game_over:
+            finished_side = Side.NORTH if MancalaEnv.holes_empty(board, Side.NORTH) else Side.SOUTH
             seeds = 0
             collecting_side = Side.opposite(finished_side)
             for hole in range(1, board.holes + 1):

@@ -6,7 +6,7 @@ import numpy as np
 class PolicyGradientAgent(object):
 
     """This is an implementation of an RL agent using the REINFORCE Policy Gradient algorithm"""
-    def __init__(self, sess: tf.Session, discount=0.99, board_size=(2, 7), num_actions=7, name='agent_name'):
+    def __init__(self, sess: tf.Session, discount=0.99, board_size=(2, 8), num_actions=8, name='agent_name'):
         self.sess = sess
         self.discount = discount
         self.board_size = board_size
@@ -24,57 +24,71 @@ class PolicyGradientAgent(object):
         self.masks = []
 
         self.build_model()
+        self.configure_training_procedure()
+
+        tf.global_variables_initializer().run()
 
     def build_model(self):
-        self.board = tf.placeholder(tf.float32, shape=[None, self.board_size[0], self.board_size[1]],
+        self.board = tf.placeholder(tf.float32, shape=[None, self.board_size[0], self.board_size[1], 1],
                                     name='board')
         self.valid_action_mask = tf.placeholder(tf.float32, shape=[None, self.num_actions],
                                                 name='binary_mask')
+        self.taken_actions = tf.placeholder(tf.int32, (None,), name='taken_actions')
+        self.discounted_rewards = tf.placeholder(tf.float32, (None, ), name='discounted_rewards')
+
+        # Outputs of the policy network
         self.logits = self.policy_network(is_training=True, reuse=False)
-        # Sample an action from the policy distribution and make it a scalar.
         self.sample = tf.reshape(tf.multinomial(self.logits, 1), [])
-        self.actions = tf.placeholder(tf.int32)
-        self.discounted_rewards = tf.placeholder(tf.int32)
 
-        log_prob = tf.log(tf.nn.softmax(self.logits))
+    def configure_training_procedure(self):
+        # # Get the log probabilities of the actions
+        # indices = tf.range(0, tf.shape(log_prob)[0]) * tf.shape(log_prob)[1] + self.actions
+        # act_prob = tf.gather(tf.reshape(log_prob, [-1]), indices)
+        self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits,
+                                                                                 labels=self.taken_actions)
+        self.pg_loss = tf.reduce_mean(self.cross_entropy_loss)
 
-        # Get the log probabilities of the actions
-        indices = tf.range(0, tf.shape(log_prob)[0]) * tf.shape(log_prob)[1] + self.actions
-        act_prob = tf.gather(tf.reshape(log_prob, [-1]), indices)
+        # compute gradients
+        self.optimiser = tf.train.AdamOptimizer(0.0002, beta1=0.5)
+        self.gradients = self.optimiser.compute_gradients(self.pg_loss)
 
-        # Define optimization procedure
-        loss = -tf.reduce_mean(tf.multiply(act_prob, self.discounted_rewards))
-        optimiser = tf.train.AdamOptimizer(0.0002, beta1=0.5)
-        self.train = optimiser.minimize(loss)
+        # compute policy gradients
+        for i, (grad, var) in enumerate(self.gradients):
+            if grad is not None:
+                self.gradients[i] = (grad * self.discounted_rewards, var)
+
+        self.train_op = self.optimiser.apply_gradients(self.gradients)
 
     def policy_network(self, is_training=True, reuse=False):
         w_init = tfl.xavier_initializer()
 
-        with tf.variable_scope('policy_network/'.format({self.name}), reuse=reuse):
-            h0 = tfl.fully_connected(tf.float32, inputs=self.board, num_outputs=20, activation_fn=tf.nn.leaky_relu,
-                                     weights_initializer=w_init)
-            h1 = tfl.fully_connected(tf.float32, inputs=h0, num_outputs=20, activation_fn=tf.nn.leaky_relu,
-                                     weights_initializer=w_init)
-            all_actions_logits = tfl.fully_connected(tf.float32, inputs=h1, num_outputs=self.num_actions,
+        with tf.variable_scope('policy_network/{}'.format(self.name), reuse=reuse):
+            net_h0 = tfl.conv2d(inputs=self.board, num_outputs=32, kernel_size=2, stride=1, padding='SAME',
+                                activation_fn=tf.nn.relu, weights_initializer=w_init)
+            net_h1 = tfl.conv2d(inputs=net_h0, num_outputs=32, kernel_size=2, padding='SAME', stride=1,
+                                activation_fn=tf.nn.relu, weights_initializer=w_init)
+            net_h2 = tfl.conv2d(inputs=net_h1, num_outputs=1, kernel_size=2, padding='VALID', stride=1,
+                                activation_fn=tf.nn.relu, weights_initializer=w_init)
+            net_h2 = tf.reshape(net_h2, shape=[-1, 7])
+            all_actions_logits = tfl.fully_connected(inputs=net_h2, num_outputs=self.num_actions, activation_fn=None,
                                                      weights_initializer=w_init)
-            logits = tf.multiply(all_actions_logits, self.valid_action_mask)
-            return logits
+            return tf.multiply(all_actions_logits, self.valid_action_mask)
 
     def sample_action(self, board, valid_action_mask):
         feed_dict = {
-            self.board: board,
-            self.valid_action_mask: valid_action_mask,
+            self.board: board[np.newaxis, :],
+            self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
         return self.sess.run(self.sample, feed_dict=feed_dict)
 
     def run_train_step(self):
         feed_dict = {
             self.board: self.states,
-            self.actions: self.actions,
-            self.discounted_rewards: self.discounted_rewards(self.rewards),
+            self.taken_actions: self.actions,
+            self.discounted_rewards: self.compute_discounted_rewards(self.rewards),
             self.valid_action_mask: self.masks,
         }
-        self.sess.run(self.train, feed_dict=feed_dict)
+        self.sess.run(self.train_op, feed_dict=feed_dict)
         self.clean_up_rollout()
 
     def store_rollout(self, state, action, reward, mask):
@@ -87,8 +101,9 @@ class PolicyGradientAgent(object):
         self.states = []
         self.actions = []
         self.rewards = []
+        self.masks = []
 
-    def discounted_rewards(self, rewards) -> np.array:
+    def compute_discounted_rewards(self, rewards) -> np.array:
         n = len(rewards)
         r = 0
         discounted_rewards = np.zeros(n)
