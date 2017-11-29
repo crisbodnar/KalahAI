@@ -1,6 +1,6 @@
 from magent.side import Side
 from copy import deepcopy
-
+import numpy as np
 
 class Board(object):
     def __init__(self, holes: int, seeds: int):
@@ -78,6 +78,9 @@ class Board(object):
 
     def get_seeds_in_store(self, side: Side):
         return self.board[Side.get_index(side)][0]
+
+    def get_board_image(self):
+        return np.reshape(np.array(self.board), (2, 8, 1))
 
     def __str__(self):
         board_str = str(self.board[Side.get_index(Side.NORTH)][0]) + " --"

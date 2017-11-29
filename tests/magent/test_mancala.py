@@ -1,12 +1,12 @@
 import unittest
-from magent.mancala import MancalaGameState
+from magent.mancala import MancalaEnv
 from magent.side import Side
 from magent.move import Move
 
 
 class TestMancalaGameState(unittest.TestCase):
     def setUp(self):
-        self.game = MancalaGameState()
+        self.game = MancalaEnv()
 
     def test_initial_state_is_correct(self):
         self.assertEqual(self.game.side_to_move, Side.SOUTH)
@@ -19,7 +19,7 @@ class TestMancalaGameState(unittest.TestCase):
         self.assertEqual(self.game.board.get_seeds_in_store(Side.NORTH), 0)
 
     def test_cloning_immutability(self):
-        clone = MancalaGameState.clone(self.game)
+        clone = MancalaEnv.clone(self.game)
         self.game.perform_move(Move(Side.SOUTH, 3))
 
         self.assertEqual(clone.board.get_seeds(Side.SOUTH, 3), 7)
@@ -47,18 +47,14 @@ class TestMancalaGameState(unittest.TestCase):
         self.assertEqual(self.game.board.get_seeds(Side.SOUTH, 3), 8)
 
     def test_game_is_over_returns_false(self):
-        game_over, winning_side = self.game.is_game_over()
-        self.assertFalse(game_over)
-        self.assertEqual(winning_side, None)
+        self.assertFalse(self.game.is_game_over())
 
     def test_game_is_over_returns_true(self):
         board = self.game.board
         for hole in range(1, board.holes + 1):
             board.set_seeds(Side.SOUTH, hole, 0)
         board.set_seeds_in_store(Side.SOUTH, 49)
-        game_over, winning_side = self.game.is_game_over()
-        self.assertTrue(game_over)
-        self.assertEqual(winning_side, Side.SOUTH)
+        self.assertTrue(self.game.is_game_over())
 
     def test_game_returns_winner_the_player_with_most_seeds(self):
         board = self.game.board
@@ -79,3 +75,14 @@ class TestMancalaGameState(unittest.TestCase):
         board.set_seeds_in_store(Side.NORTH, 30)
 
         self.assertEqual(self.game.get_winner(), None)
+
+    def test_is_legal_move_returns_true_for_the_pie_rule(self):
+        board = self.game.board
+        MancalaEnv.make_move(board, Move(Side.SOUTH, 6), False)
+        self.assertTrue(MancalaEnv.is_legal_move(board, Move(Side.NORTH, 0), False))
+
+    def test_is_legal_move_returns_true_for_the_pie_rule2(self):
+        env = MancalaEnv()
+        env.perform_move(Move(Side.SOUTH, 5))
+        print(env.board)
+        self.assertTrue(env.is_legal(Move(Side.NORTH, 0)))
