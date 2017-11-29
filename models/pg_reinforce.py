@@ -23,6 +23,8 @@ class PolicyGradientAgent(object):
         self.rewards = []
         self.masks = []
 
+        self.global_step = tf.Variable(0, name="global_step", trainable=False)
+
         self.build_model()
         self.configure_training_procedure()
 
@@ -33,31 +35,24 @@ class PolicyGradientAgent(object):
                                     name='board')
         self.valid_action_mask = tf.placeholder(tf.float32, shape=[None, self.num_actions],
                                                 name='binary_mask')
-        self.taken_actions = tf.placeholder(tf.int32, (None,), name='taken_actions')
-        self.discounted_rewards = tf.placeholder(tf.float32, (None, ), name='discounted_rewards')
+        self.taken_actions = tf.placeholder(tf.int32, shape=[None], name='taken_actions')
+        self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
         self.logits = self.policy_network(is_training=True, reuse=False)
         self.sample = tf.reshape(tf.multinomial(self.logits, 1), [])
+        self.action_prob = tf.nn.softmax(self.logits)
 
     def configure_training_procedure(self):
-        # # Get the log probabilities of the actions
-        # indices = tf.range(0, tf.shape(log_prob)[0]) * tf.shape(log_prob)[1] + self.actions
-        # act_prob = tf.gather(tf.reshape(log_prob, [-1]), indices)
-        self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits,
-                                                                                 labels=self.taken_actions)
-        self.pg_loss = tf.reduce_mean(self.cross_entropy_loss)
+        # get log probs of actions from episode
+        indices = tf.range(0, tf.shape(self.logits)[0]) * tf.shape(self.logits)[1] + self.taken_actions
+        self.picked_act_logits = tf.gather(tf.reshape(self.logits, [-1]), indices)
+
+        self.loss = -tf.reduce_sum(tf.multiply(self.picked_act_logits, self.discounted_rewards))
 
         # compute gradients
-        self.optimiser = tf.train.AdamOptimizer(0.0002, beta1=0.5)
-        self.gradients = self.optimiser.compute_gradients(self.pg_loss)
-
-        # compute policy gradients
-        for i, (grad, var) in enumerate(self.gradients):
-            if grad is not None:
-                self.gradients[i] = (grad * self.discounted_rewards, var)
-
-        self.train_op = self.optimiser.apply_gradients(self.gradients)
+        self.optimiser = tf.train.RMSPropOptimizer(0.0002)
+        self.train_op = self.optimiser.minimize(self.loss)
 
     def policy_network(self, is_training=True, reuse=False):
         w_init = tfl.xavier_initializer()
@@ -72,14 +67,15 @@ class PolicyGradientAgent(object):
             net_h2 = tf.reshape(net_h2, shape=[-1, 7])
             all_actions_logits = tfl.fully_connected(inputs=net_h2, num_outputs=self.num_actions, activation_fn=None,
                                                      weights_initializer=w_init)
-            return tf.multiply(all_actions_logits, self.valid_action_mask)
+            return all_actions_logits - self.valid_action_mask
 
     def sample_action(self, board, valid_action_mask):
         feed_dict = {
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        return self.sess.run(self.sample, feed_dict=feed_dict)
+        a, b = self.sess.run([self.sample, self.action_prob], feed_dict=feed_dict)
+        return a
 
     def run_train_step(self):
         feed_dict = {
@@ -88,8 +84,13 @@ class PolicyGradientAgent(object):
             self.discounted_rewards: self.compute_discounted_rewards(self.rewards),
             self.valid_action_mask: self.masks,
         }
-        self.sess.run(self.train_op, feed_dict=feed_dict)
+        _, loss = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
         self.clean_up_rollout()
+
+        return loss
+
+    def get_average_reward(self):
+        return np.mean(self.all_rewards)
 
     def store_rollout(self, state, action, reward, mask):
         self.states.append(state)

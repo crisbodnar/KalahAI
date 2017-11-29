@@ -75,3 +75,14 @@ class TestMancalaGameState(unittest.TestCase):
         board.set_seeds_in_store(Side.NORTH, 30)
 
         self.assertEqual(self.game.get_winner(), None)
+
+    def test_is_legal_move_returns_true_for_the_pie_rule(self):
+        board = self.game.board
+        MancalaEnv.make_move(board, Move(Side.SOUTH, 6), False)
+        self.assertTrue(MancalaEnv.is_legal_move(board, Move(Side.NORTH, 0), False))
+
+    def test_is_legal_move_returns_true_for_the_pie_rule2(self):
+        env = MancalaEnv()
+        env.perform_move(Move(Side.SOUTH, 5))
+        print(env.board)
+        self.assertTrue(env.is_legal(Move(Side.NORTH, 0)))

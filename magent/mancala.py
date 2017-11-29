@@ -8,9 +8,7 @@ import numpy as np
 
 class MancalaEnv(object):
     def __init__(self):
-        self._board = Board(7, 7)
-        self._side_to_move = Side.SOUTH
-        self._north_moved = False
+        self.reset()
 
     @property
     def board(self):
@@ -79,9 +77,9 @@ class MancalaEnv(object):
 
     def get_valid_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = [0.0 for _ in range(self.board.holes + 1)]
+        mask = [100000 for _ in range(self.board.holes + 1)]
         for action in self.get_legal_moves():
-            mask[action.index] = 1.0
+            mask[action.index] = 0
         return np.array(mask)
 
     def get_winner(self) -> Side or None:
@@ -116,9 +114,12 @@ class MancalaEnv(object):
 
     @staticmethod
     def is_legal_move(board: Board, move: Move, north_moved: bool) -> bool:
-        if move.index is 0 and north_moved:
-            return False
-        return (move.index >= 1) and (move.index <= board.holes) and (board.get_seeds(move.side, move.index) != 0)
+        if move.index == 0:
+            if move.side == Side.SOUTH:
+                return False
+            if not north_moved:
+                return True
+        return (move.index >= 1) and (move.index <= board.holes) and (board.get_seeds(move.side, move.index) > 0)
 
     @staticmethod
     def holes_empty(board: Board, side: Side):
@@ -147,11 +148,10 @@ class MancalaEnv(object):
     @staticmethod
     def make_move(board: Board, move: Move, north_moved):
         if not MancalaEnv.is_legal_move(board, move, north_moved):
-
-            raise ValueError('Move is illegal: Board: \n {} \n Move:\n {}/{}'.format(board, move.index, move.side))
+            raise ValueError('Move is illegal: Board: \n {} \n Move:\n {}/{} \n {}'.format(board, move.index, move.side, north_moved))
 
         # This is a pie move
-        if move.index is 0:
+        if move.index == 0:
             MancalaEnv.switch_sides(board)
             return Side.opposite(move.side)
 
@@ -167,7 +167,7 @@ class MancalaEnv(object):
         remaining_seeds = seeds_to_sow % receiving_holes
 
         # Sow the seeds for the full rounds
-        if rounds is not 0:
+        if rounds != 0:
             for hole in range(1, holes + 1):
                 board.add_seeds(Side.NORTH, hole, rounds)
                 board.add_seeds(Side.SOUTH, hole, rounds)
@@ -211,6 +211,6 @@ class MancalaEnv(object):
             board.add_seeds_to_store(collecting_side, seeds)
 
         # Return the side which is next to move
-        if sow_hole is 0:
+        if sow_hole == 0:
             return move.side  # Last seed was placed in the store, so side moves again
         return Side.opposite(move.side)

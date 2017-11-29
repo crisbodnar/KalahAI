@@ -6,6 +6,7 @@ import numpy as np
 
 
 class PolicyGradientTrainer(object):
+
     def __init__(self, south: PolicyGradientAgent, north: PolicyGradientAgent, env: MancalaEnv):
         self.south = south
         self.north = north
@@ -16,7 +17,7 @@ class PolicyGradientTrainer(object):
         self.env.reset()
         while not self.env.is_game_over():
             state = self.env.board.get_board_image()
-            if self.env.side_to_move is Side.SOUTH:
+            if self.env.side_to_move == Side.SOUTH:
                 valid_actions_mask = self.env.get_valid_actions_mask()
                 action = self.south.sample_action(np.array(state), valid_actions_mask)
                 reward = self.env.perform_move(Move(Side.SOUTH, action))
@@ -30,8 +31,12 @@ class PolicyGradientTrainer(object):
     def train(self, games=10000):
         for t in range(games):
             self.policy_rollout()
-            self.south.run_train_step()
-            self.north.run_train_step()
+            south_loss = self.south.run_train_step()
+            north_loss = self.north.run_train_step()
+
+            if t % 100 == 0:
+                print('South loss: {} | Average reward: {}'.format(south_loss, self.south.get_average_reward()))
+                print('North loss: {} | Average reward: {}'.format(north_loss, self.north.get_average_reward()))
 
 
 
