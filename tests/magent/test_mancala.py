@@ -1,12 +1,12 @@
 import unittest
-from magent.mancala import MancalaGameState
+from magent.mancala import MancalaEnv
 from magent.side import Side
 from magent.move import Move
 
 
 class TestMancalaGameState(unittest.TestCase):
     def setUp(self):
-        self.game = MancalaGameState()
+        self.game = MancalaEnv()
 
     def test_initial_state_is_correct(self):
         self.assertEqual(self.game.side_to_move, Side.SOUTH)
@@ -19,7 +19,7 @@ class TestMancalaGameState(unittest.TestCase):
         self.assertEqual(self.game.board.get_seeds_in_store(Side.NORTH), 0)
 
     def test_cloning_immutability(self):
-        clone = MancalaGameState.clone(self.game)
+        clone = MancalaEnv.clone(self.game)
         self.game.perform_move(Move(Side.SOUTH, 3))
 
         self.assertEqual(clone.board.get_seeds(Side.SOUTH, 3), 7)

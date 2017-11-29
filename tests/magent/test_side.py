@@ -1,5 +1,5 @@
 import unittest
-from magent.mancala import MancalaGameState
+from magent.mancala import MancalaEnv
 from magent.side import Side
 from magent.move import Move
 
