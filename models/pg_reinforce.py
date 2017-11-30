@@ -33,8 +33,13 @@ class PolicyGradientAgent(object):
 
         self.build_model()
         self.configure_training_procedure()
-
         tf.global_variables_initializer().run()
+
+        try:
+            self.restore_model_params('agent')
+            print('Successfully loaded checkpoint for {}.'.format(self.name))
+        except:
+            print('Successfully loaded checkpoint for {}.'.format(self.name))
 
     def build_model(self):
         self.board = tf.placeholder(tf.float32, shape=[None, self.board_size[0], self.board_size[1], 1],
@@ -123,6 +128,15 @@ class PolicyGradientAgent(object):
         action_prob = np.ndarray.flatten(action_prob)
         return np.random.choice(self.num_actions, p=action_prob)
 
+    def get_best_action(self, board, valid_action_mask):
+        feed_dict = {
+            self.board: board[np.newaxis, :],
+            self.valid_action_mask: valid_action_mask[np.newaxis, :],
+        }
+        action_prob = self.sess.run(self.action_prob, feed_dict=feed_dict)
+        action_prob = np.ndarray.flatten(action_prob)
+        return np.argmax(action_prob)
+
     def run_train_step(self):
         feed_dict = {
             self.board: self.states,
@@ -166,13 +180,13 @@ class PolicyGradientAgent(object):
 
         return discounted_rewards
 
-    def save_model_params(self, file, step):
+    def save_model_params(self, file):
         path = os.path.join(self.checkpoint_dir, file)
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
         self.saver.save(self.sess, path)
 
-    def restore_model_params(self, file, step):
+    def restore_model_params(self, file):
         path = os.path.join(self.checkpoint_dir, file)
         self.saver.restore(self.sess, path)
 

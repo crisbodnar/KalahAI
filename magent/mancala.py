@@ -70,7 +70,13 @@ class MancalaEnv(object):
         if self.is_game_over():
             return 1000 if self.get_winner() == side else -1000
         reward = self.board.get_seeds_in_store(Side.NORTH) - self.board.get_seeds_in_store(Side.SOUTH)
-        return reward if side == Side.NORTH else -reward
+        reward = reward if side == Side.NORTH else -reward
+
+        # Reward actions which produce consecutive moves
+        if self.side_to_move == side:
+            reward += 100
+
+        return reward
 
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)

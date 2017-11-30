@@ -40,6 +40,23 @@ class PolicyGradientTrainer(object):
         self.games += 1
         self.south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
 
+    def play_against_random(self) -> float:
+        south_wins = 0
+        for g in range(100):
+            self.env.reset()
+            while not self.env.is_game_over():
+                self.turns += 1
+                if self.env.side_to_move == Side.SOUTH:
+                    state = self.env.board.get_board_image()
+                    valid_actions_mask = self.env.get_actions_mask()
+                    action = self.agent.get_best_action(state, valid_actions_mask)
+                    _ = self.env.perform_move(Move(Side.SOUTH, action))
+                else:
+                    action = np.random.choice(self.env.get_legal_moves())
+                    _ = self.env.perform_move(action)
+            south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
+        return south_wins / 100.0
+
     def train(self, games=100000):
         for t in range(games):
             self.policy_rollout()
@@ -56,7 +73,11 @@ class PolicyGradientTrainer(object):
 
             if t % 2000 == 0:
                 self.agent.transfer_params(self.opponent)
-                self.agent.save_model_params('agent', step=t)
+                self.agent.save_model_params('south')
+
+                print('Winning rate against random: {}'.format(self.play_against_random()))
+
+
 
 
 
