@@ -54,9 +54,9 @@ class PolicyGradientTrainer(object):
                 self.south_wins = 0
                 self.games = 0
 
-            if t % 1000 == 0:
+            if t % 2000 == 0:
                 self.agent.transfer_params(self.opponent)
-                self.agent.save_model_params('agent')
+                self.agent.save_model_params('agent', step=t)
 
 
 

@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as tfl
 import numpy as np
 import os
+from models.ops import batch_normalization
 
 
 class PolicyGradientAgent(object):
@@ -44,8 +45,8 @@ class PolicyGradientAgent(object):
         self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
-        self.action_prob, self.logits = self.policy_network(is_training=self.is_training, reuse=self.reuse)
-        self.sample = tf.reshape(tf.multinomial(tf.log(self.action_prob), 1), [])
+        _, self.logits = self.policy_network(is_training=self.is_training, reuse=self.reuse)
+        self.action_prob, _ = self.policy_network(is_training=False, reuse=True)
 
     def configure_training_procedure(self):
         # get log probs of actions from episode
@@ -56,27 +57,56 @@ class PolicyGradientAgent(object):
 
         t_vars = tf.trainable_variables()
         self.vars = [var for var in t_vars if 'policy_network_{}'.format(self.name) in var.name]
-        print(self.vars)
 
         self.saver = tf.train.Saver()
 
         # compute gradients
-        self.optimiser = tf.train.RMSPropOptimizer(0.0002)
+        self.optimiser = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
         self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
 
     def policy_network(self, is_training=True, reuse=False):
         w_init = tfl.xavier_initializer()
-        epsilon = 1e-17
+        gamma_init = tf.random_normal_initializer(1., 0.02)
+        epsilon = 1e-100
 
         with tf.variable_scope('policy_network_{}'.format(self.name), reuse=reuse):
-            net_h0 = tf.layers.conv2d(inputs=self.board, filters=32, kernel_size=2, strides=1, padding='SAME',
-                                      activation=tf.nn.relu, kernel_initializer=w_init, name='pg_net_h0')
-            net_h1 = tf.layers.conv2d(inputs=net_h0, filters=32, kernel_size=2, padding='SAME', strides=1,
-                                      activation=tf.nn.relu, kernel_initializer=w_init, name='pg_net_h1')
-            net_h2 = tf.layers.conv2d(inputs=net_h1, filters=1, kernel_size=2, padding='VALID', strides=1,
-                                      activation=tf.nn.relu, kernel_initializer=w_init)
-            net_h2 = tf.reshape(net_h2, shape=[-1, 7], name='pg_net_h2')
-            logits = tf.layers.dense(inputs=net_h2, units=self.num_actions, activation=None,
+            net_h0 = tf.layers.conv2d(inputs=self.board, filters=8, kernel_size=2, strides=1, padding='SAME',
+                                      activation=tf.nn.relu, kernel_initializer=w_init, name='pg_h0/conv2d')
+            net_h1 = tf.layers.conv2d(inputs=net_h0, filters=16, kernel_size=2, padding='SAME', strides=1,
+                                      activation=None, kernel_initializer=w_init, name='pg_h1/conv2d')
+            net_h1 = batch_normalization(net_h1, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h1/batch_norm')
+            net_h2 = tf.layers.conv2d(inputs=net_h1, filters=32, kernel_size=2, padding='SAME', strides=1,
+                                      activation=None, kernel_initializer=w_init, name='pg_h2/conv2d')
+            net_h2 = batch_normalization(net_h2, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h2/batch_norm')
+
+            # Residual layer
+            net = tf.layers.conv2d(inputs=net_h2, filters=8, kernel_size=2, strides=(1, 1),
+                                   padding='SAME', activation=None, kernel_initializer=w_init,
+                                   name='pg_h3_res/conv2d')
+            net = batch_normalization(net, is_training=is_training, initializer=gamma_init,
+                                      activation=tf.nn.relu, name='pg_h3_res/batch_norm')
+            net = tf.layers.conv2d(inputs=net, filters=16, kernel_size=2, strides=(1, 1),
+                                   padding='SAME', activation=tf.nn.relu, kernel_initializer=w_init,
+                                   name='pg_h3_res/conv2d2')
+            net = batch_normalization(net, is_training=is_training, initializer=gamma_init,
+                                      activation=tf.nn.relu, name='pg_h3_res/batch_norm2')
+            net = tf.layers.conv2d(inputs=net, filters=32, kernel_size=2, strides=(1, 1),
+                                   padding='SAME', activation=None, kernel_initializer=w_init,
+                                   name='pg_h3_res/conv2d3')
+            net = batch_normalization(net, is_training=is_training, initializer=gamma_init,
+                                      activation=tf.nn.relu, name='pg_h3_res/batch_norm3')
+            net_h3 = tf.add(net_h2, net, name='pg_h3/add')
+            net_h3 = tf.nn.relu(net_h3, name='pg_h3/add_lrelu')
+
+            net_h4 = tf.layers.conv2d(inputs=net_h3, filters=1, kernel_size=2, padding='VALID', strides=1,
+                                      activation=None, kernel_initializer=w_init, name='pg_h4/cov2d')
+            net_h4 = batch_normalization(net_h4, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h4/batch_norm')
+            net_h4 = tf.reshape(net_h4, shape=[-1, 7], name='pg_h4/reshaped')
+
+            logits = tf.layers.dense(inputs=net_h4, units=self.num_actions, activation=None,
                                      kernel_initializer=w_init, name='pg_logits')
             exp_logits = tf.exp(logits, name='pg_exp_logits')
             action_prob = (exp_logits * self.valid_action_mask) \
@@ -89,8 +119,9 @@ class PolicyGradientAgent(object):
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        sampled_action, action_prob = self.sess.run([self.sample, self.action_prob], feed_dict=feed_dict)
-        return sampled_action
+        action_prob = self.sess.run(self.action_prob, feed_dict=feed_dict)
+        action_prob = np.ndarray.flatten(action_prob)
+        return np.random.choice(self.num_actions, p=action_prob)
 
     def run_train_step(self):
         feed_dict = {
@@ -135,13 +166,13 @@ class PolicyGradientAgent(object):
 
         return discounted_rewards
 
-    def save_model_params(self, file):
+    def save_model_params(self, file, step):
         path = os.path.join(self.checkpoint_dir, file)
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
         self.saver.save(self.sess, path)
 
-    def restore_model_params(self, file):
+    def restore_model_params(self, file, step):
         path = os.path.join(self.checkpoint_dir, file)
         self.saver.restore(self.sess, path)
 
