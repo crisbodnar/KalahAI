@@ -4,3 +4,4 @@ __pycache__
 output/
 target/
 *.class
+/models/checkpoints/

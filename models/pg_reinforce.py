@@ -1,17 +1,22 @@
 import tensorflow as tf
 import tensorflow.contrib.layers as tfl
 import numpy as np
+import os
 
 
 class PolicyGradientAgent(object):
 
     """This is an implementation of an RL agent using the REINFORCE Policy Gradient algorithm"""
-    def __init__(self, sess: tf.Session, discount=0.99, board_size=(2, 8), num_actions=8, name='agent_name'):
+    def __init__(self, sess: tf.Session, discount=0.99, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
+                 name='agent_name', checkpoint_dir='models/checkpoints/'):
         self.sess = sess
         self.discount = discount
         self.board_size = board_size
         self.num_actions = num_actions
         self.name = name
+        self.checkpoint_dir = checkpoint_dir
+        self.reuse = reuse
+        self.is_training = is_training
 
         # Record reward history for normalization
         self.all_rewards = []
@@ -39,7 +44,7 @@ class PolicyGradientAgent(object):
         self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
-        self.action_prob, self.logits = self.policy_network(is_training=True, reuse=False)
+        self.action_prob, self.logits = self.policy_network(is_training=self.is_training, reuse=self.reuse)
         self.sample = tf.reshape(tf.multinomial(tf.log(self.action_prob), 1), [])
 
     def configure_training_procedure(self):
@@ -50,7 +55,10 @@ class PolicyGradientAgent(object):
         self.loss = -tf.reduce_mean(tf.multiply(self.picked_act_logits, self.discounted_rewards))
 
         t_vars = tf.trainable_variables()
-        self.vars = [var for var in t_vars if '{}/pg'.format(self.name) in var.name]
+        self.vars = [var for var in t_vars if 'policy_network_{}'.format(self.name) in var.name]
+        print(self.vars)
+
+        self.saver = tf.train.Saver()
 
         # compute gradients
         self.optimiser = tf.train.RMSPropOptimizer(0.0002)
@@ -60,7 +68,7 @@ class PolicyGradientAgent(object):
         w_init = tfl.xavier_initializer()
         epsilon = 1e-17
 
-        with tf.variable_scope('policy_network/{}'.format(self.name), reuse=reuse):
+        with tf.variable_scope('policy_network_{}'.format(self.name), reuse=reuse):
             net_h0 = tf.layers.conv2d(inputs=self.board, filters=32, kernel_size=2, strides=1, padding='SAME',
                                       activation=tf.nn.relu, kernel_initializer=w_init, name='pg_net_h0')
             net_h1 = tf.layers.conv2d(inputs=net_h0, filters=32, kernel_size=2, padding='SAME', strides=1,
@@ -127,5 +135,17 @@ class PolicyGradientAgent(object):
 
         return discounted_rewards
 
+    def save_model_params(self, file):
+        path = os.path.join(self.checkpoint_dir, file)
+        if not os.path.exists(self.checkpoint_dir):
+            os.makedirs(self.checkpoint_dir)
+        self.saver.save(self.sess, path)
 
+    def restore_model_params(self, file):
+        path = os.path.join(self.checkpoint_dir, file)
+        self.saver.restore(self.sess, path)
+
+    def transfer_params(self, other_agent):
+        transfer_op = [other_var.assign(this_var.value()) for other_var, this_var in zip(other_agent.vars, self.vars)]
+        self.sess.run(transfer_op)
 
