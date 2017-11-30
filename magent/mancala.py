@@ -52,15 +52,15 @@ class MancalaEnv(object):
         return clone_game
 
     def get_legal_moves(self) -> List[Move]:
-        return MancalaEnv.get_state_legal_moves(self.board, self.side_to_move, self.north_moved)
+        return MancalaEnv.get_state_legal_actions(self.board, self.side_to_move, self.north_moved)
 
     def is_legal(self, move: Move) -> bool:
-        return MancalaEnv.is_legal_move(self.board, move, self.north_moved)
+        return MancalaEnv.is_legal_action(self.board, move, self.north_moved)
 
     def perform_move(self, move: Move) -> int:
         """Performs a move and returns the reward for this move."""
         self.side_to_move = MancalaEnv.make_move(self.board, move, self.north_moved)
-        if move.side is Side.NORTH:
+        if move.side == Side.NORTH:
             self.north_moved = True
 
         return self.compute_reward(move.side)
@@ -68,9 +68,9 @@ class MancalaEnv(object):
     def compute_reward(self, side: Side):
         """Returns a reward for the specified side for moving to the current state."""
         if self.is_game_over():
-            return 1000 if self.get_winner() is side else -1000
+            return 1000 if self.get_winner() == side else -1000
         reward = self.board.get_seeds_in_store(Side.NORTH) - self.board.get_seeds_in_store(Side.SOUTH)
-        return reward if side is Side.NORTH else -reward
+        return reward if side == Side.NORTH else -reward
 
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)
@@ -104,22 +104,17 @@ class MancalaEnv(object):
 
     # Generate a set of all legal moves given a board state and a side
     @staticmethod
-    def get_state_legal_moves(board: Board, side: Side, north_moved: bool) -> List[Move]:
+    def get_state_legal_actions(board: Board, side: Side, north_moved: bool) -> List[Move]:
         # If this is the first move of NORTH, then NORTH can use the pie rule action
-        legal_moves = [] if north_moved or side is side.SOUTH else [Move(side, 0)]
+        legal_moves = [] if north_moved or side == side.SOUTH else [Move(side, 0)]
         for i in range(1, board.holes + 1):
             if board.board[side.get_index(side)][i] > 0:
                 legal_moves.append(Move(side, i))
         return legal_moves
 
     @staticmethod
-    def is_legal_move(board: Board, move: Move, north_moved: bool) -> bool:
-        if move.index == 0:
-            if move.side == Side.SOUTH:
-                return False
-            if not north_moved:
-                return True
-        return (move.index >= 1) and (move.index <= board.holes) and (board.get_seeds(move.side, move.index) > 0)
+    def is_legal_action(board: Board, move: Move, north_moved: bool) -> bool:
+        return move.index in [act.index for act in MancalaEnv.get_state_legal_actions(board, move.side, north_moved)]
 
     @staticmethod
     def holes_empty(board: Board, side: Side):
@@ -147,8 +142,9 @@ class MancalaEnv(object):
 
     @staticmethod
     def make_move(board: Board, move: Move, north_moved):
-        if not MancalaEnv.is_legal_move(board, move, north_moved):
-            raise ValueError('Move is illegal: Board: \n {} \n Move:\n {}/{} \n {}'.format(board, move.index, move.side, north_moved))
+        if not MancalaEnv.is_legal_action(board, move, north_moved):
+            raise ValueError('Move is illegal: Board: \n {} \n Move:\n {}/{} \n {}'.format(board, move.index, move.side,
+                                                                                           north_moved))
 
         # This is a pie move
         if move.index == 0:

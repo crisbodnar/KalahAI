@@ -81,9 +81,8 @@ class PolicyGradientAgent(object):
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        a, b = self.sess.run([self.sample, self.action_prob], feed_dict=feed_dict)
-        # print(b)
-        return a
+        sampled_action, action_prob = self.sess.run([self.sample, self.action_prob], feed_dict=feed_dict)
+        return sampled_action
 
     def run_train_step(self):
         feed_dict = {

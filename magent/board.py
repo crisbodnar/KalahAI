@@ -2,6 +2,7 @@ from magent.side import Side
 from copy import deepcopy
 import numpy as np
 
+
 class Board(object):
     def __init__(self, holes: int, seeds: int):
         if holes < 1:
@@ -79,7 +80,17 @@ class Board(object):
     def get_seeds_in_store(self, side: Side):
         return self.board[Side.get_index(side)][0]
 
-    def get_board_image(self):
+    def get_flipped_board(self):
+        copy = Board.clone(self)
+        flipped_board = copy.board
+        for hole in range(1, copy.holes + 1):
+            flipped_board[0][hole], flipped_board[1][hole] = flipped_board[1][hole], flipped_board[0][hole]
+        flipped_board[0][0], flipped_board[1][0] = flipped_board[1][0], flipped_board[0][0]
+        return flipped_board
+
+    def get_board_image(self, flipped=False):
+        if flipped:
+            return np.reshape(np.array(self.get_flipped_board()), (2, 8, 1))
         return np.reshape(np.array(self.board), (2, 8, 1))
 
     def __str__(self):

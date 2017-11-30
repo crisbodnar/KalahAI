@@ -14,6 +14,8 @@ class PolicyGradientTrainer(object):
         self.env = env
 
         self.turns_history = deque([], 10)
+        self.games = 0
+        self.south_wins = 0
 
     def policy_rollout(self):
         # Reset the environment to make sure everything starts in a clean state.
@@ -34,6 +36,8 @@ class PolicyGradientTrainer(object):
                 self.north.store_rollout(state, action, reward, valid_actions_mask)
 
         self.turns_history.append(self.turns)
+        self.games += 1
+        self.south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
 
     def train(self, games=10000):
         for t in range(games):
@@ -45,6 +49,11 @@ class PolicyGradientTrainer(object):
                 print('South loss: {} | Average reward: {}'.format(south_loss, self.south.get_average_reward()))
                 # print('North loss: {} | Average reward: {}'.format(north_loss, self.north.get_average_reward()))
                 print('Avg number of turns: {}'.format(np.mean(self.turns_history)))
+                print('South winning rate {}'.format(self.south_wins/self.games))
+
+                # Restart statistics every few games
+                self.south_wins = 0
+                self.games = 0
 
 
 
