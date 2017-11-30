@@ -75,11 +75,11 @@ class MancalaEnv(object):
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)
 
-    def get_valid_actions_mask(self) -> [float]:
+    def get_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = [100000 for _ in range(self.board.holes + 1)]
+        mask = [0 for _ in range(self.board.holes + 1)]
         for action in self.get_legal_moves():
-            mask[action.index] = 0
+            mask[action.index] = 1
         return np.array(mask)
 
     def get_winner(self) -> Side or None:

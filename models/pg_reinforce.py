@@ -39,35 +39,42 @@ class PolicyGradientAgent(object):
         self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
-        self.logits = self.policy_network(is_training=True, reuse=False)
-        self.sample = tf.reshape(tf.multinomial(self.logits, 1), [])
-        self.action_prob = tf.nn.softmax(self.logits)
+        self.action_prob, self.logits = self.policy_network(is_training=True, reuse=False)
+        self.sample = tf.reshape(tf.multinomial(tf.log(self.action_prob), 1), [])
 
     def configure_training_procedure(self):
         # get log probs of actions from episode
         indices = tf.range(0, tf.shape(self.logits)[0]) * tf.shape(self.logits)[1] + self.taken_actions
         self.picked_act_logits = tf.gather(tf.reshape(self.logits, [-1]), indices)
 
-        self.loss = -tf.reduce_sum(tf.multiply(self.picked_act_logits, self.discounted_rewards))
+        self.loss = -tf.reduce_mean(tf.multiply(self.picked_act_logits, self.discounted_rewards))
+
+        t_vars = tf.trainable_variables()
+        self.vars = [var for var in t_vars if '{}/pg'.format(self.name) in var.name]
 
         # compute gradients
         self.optimiser = tf.train.RMSPropOptimizer(0.0002)
-        self.train_op = self.optimiser.minimize(self.loss)
+        self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
 
     def policy_network(self, is_training=True, reuse=False):
         w_init = tfl.xavier_initializer()
+        epsilon = 1e-17
 
         with tf.variable_scope('policy_network/{}'.format(self.name), reuse=reuse):
-            net_h0 = tfl.conv2d(inputs=self.board, num_outputs=32, kernel_size=2, stride=1, padding='SAME',
-                                activation_fn=tf.nn.relu, weights_initializer=w_init)
-            net_h1 = tfl.conv2d(inputs=net_h0, num_outputs=32, kernel_size=2, padding='SAME', stride=1,
-                                activation_fn=tf.nn.relu, weights_initializer=w_init)
-            net_h2 = tfl.conv2d(inputs=net_h1, num_outputs=1, kernel_size=2, padding='VALID', stride=1,
-                                activation_fn=tf.nn.relu, weights_initializer=w_init)
-            net_h2 = tf.reshape(net_h2, shape=[-1, 7])
-            all_actions_logits = tfl.fully_connected(inputs=net_h2, num_outputs=self.num_actions, activation_fn=None,
-                                                     weights_initializer=w_init)
-            return all_actions_logits - self.valid_action_mask
+            net_h0 = tf.layers.conv2d(inputs=self.board, filters=32, kernel_size=2, strides=1, padding='SAME',
+                                      activation=tf.nn.relu, kernel_initializer=w_init, name='pg_net_h0')
+            net_h1 = tf.layers.conv2d(inputs=net_h0, filters=32, kernel_size=2, padding='SAME', strides=1,
+                                      activation=tf.nn.relu, kernel_initializer=w_init, name='pg_net_h1')
+            net_h2 = tf.layers.conv2d(inputs=net_h1, filters=1, kernel_size=2, padding='VALID', strides=1,
+                                      activation=tf.nn.relu, kernel_initializer=w_init)
+            net_h2 = tf.reshape(net_h2, shape=[-1, 7], name='pg_net_h2')
+            logits = tf.layers.dense(inputs=net_h2, units=self.num_actions, activation=None,
+                                     kernel_initializer=w_init, name='pg_logits')
+            exp_logits = tf.exp(logits, name='pg_exp_logits')
+            action_prob = (exp_logits * self.valid_action_mask) \
+                / (tf.reduce_sum(exp_logits * self.valid_action_mask) + epsilon)
+
+            return action_prob, logits
 
     def sample_action(self, board, valid_action_mask):
         feed_dict = {
@@ -75,6 +82,7 @@ class PolicyGradientAgent(object):
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
         a, b = self.sess.run([self.sample, self.action_prob], feed_dict=feed_dict)
+        # print(b)
         return a
 
     def run_train_step(self):
