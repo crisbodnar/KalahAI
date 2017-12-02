@@ -4,16 +4,19 @@ from magent.side import Side
 from magent.move import Move
 import numpy as np
 from collections import deque
+import tensorflow as tf
 
 
 class PolicyGradientTrainer(object):
 
-    def __init__(self, south: PolicyGradientAgent, north: PolicyGradientAgent, env: MancalaEnv):
-        self.south = south
-        self.north = north
+    def __init__(self, agent: PolicyGradientAgent, opponent: PolicyGradientAgent, env: MancalaEnv):
+        self.agent = agent
+        self.opponent = opponent
         self.env = env
 
         self.turns_history = deque([], 10)
+        self.games = 0
+        self.south_wins = 0
 
     def policy_rollout(self):
         # Reset the environment to make sure everything starts in a clean state.
@@ -21,30 +24,60 @@ class PolicyGradientTrainer(object):
         self.turns = 0
         while not self.env.is_game_over():
             self.turns += 1
-            state = self.env.board.get_board_image()
             if self.env.side_to_move == Side.SOUTH:
+                state = self.env.board.get_board_image()
                 valid_actions_mask = self.env.get_actions_mask()
-                action = self.south.sample_action(np.array(state), valid_actions_mask)
+                action = self.agent.sample_action(np.array(state), valid_actions_mask)
                 reward = self.env.perform_move(Move(Side.SOUTH, action))
-                self.south.store_rollout(state, action, reward, valid_actions_mask)
+                self.agent.store_rollout(state, action, reward, valid_actions_mask)
             else:
+                state = self.env.board.get_board_image(flipped=True)
                 valid_actions_mask = self.env.get_actions_mask()
-                action = self.north.sample_action(state, valid_actions_mask)
-                reward = self.env.perform_move(Move(Side.NORTH, action))
-                self.north.store_rollout(state, action, reward, valid_actions_mask)
+                action = self.opponent.sample_action(state, valid_actions_mask)
+                _ = self.env.perform_move(Move(Side.NORTH, action))
 
         self.turns_history.append(self.turns)
+        self.games += 1
+        self.south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
 
-    def train(self, games=10000):
+    def play_against_random(self) -> float:
+        south_wins = 0
+        for g in range(100):
+            self.env.reset()
+            while not self.env.is_game_over():
+                self.turns += 1
+                if self.env.side_to_move == Side.SOUTH:
+                    state = self.env.board.get_board_image()
+                    valid_actions_mask = self.env.get_actions_mask()
+                    action = self.agent.get_best_action(state, valid_actions_mask)
+                    _ = self.env.perform_move(Move(Side.SOUTH, action))
+                else:
+                    action = np.random.choice(self.env.get_legal_moves())
+                    _ = self.env.perform_move(action)
+            south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
+        return south_wins / 100.0
+
+    def train(self, games=100000):
         for t in range(games):
             self.policy_rollout()
-            south_loss = self.south.run_train_step()
-            # north_loss = self.north.run_train_step()
+            south_loss = self.agent.run_train_step()
 
             if t % 100 == 0:
-                print('South loss: {} | Average reward: {}'.format(south_loss, self.south.get_average_reward()))
-                # print('North loss: {} | Average reward: {}'.format(north_loss, self.north.get_average_reward()))
+                print('Agent loss: {} | Average reward: {}'.format(south_loss, self.agent.get_average_reward()))
                 print('Avg number of turns: {}'.format(np.mean(self.turns_history)))
+                print('South winning rate {}'.format(self.south_wins/self.games))
+
+                # Restart statistics every few games
+                self.south_wins = 0
+                self.games = 0
+
+            if t % 2000 == 0:
+                self.agent.transfer_params(self.opponent)
+                self.agent.save_model_params('south')
+
+                print('Winning rate against random: {}'.format(self.play_against_random()))
+
+
 
 
 
