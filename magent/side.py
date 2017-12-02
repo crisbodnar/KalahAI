@@ -19,3 +19,9 @@ class Side(Enum):
         if side is side.NORTH:
             return side.SOUTH
         return side.NORTH
+
+    @staticmethod
+    def side_to_str(side) -> str:
+        if side is side.NORTH:
+            return "North"
+        return "South"
