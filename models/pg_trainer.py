@@ -1,5 +1,7 @@
+import time
+
 from magent.mancala import MancalaEnv
-from models.pg_reinforce import PolicyGradientAgent
+from models.reinforce_agent import PolicyGradientAgent
 from magent.side import Side
 from magent.move import Move
 import numpy as np
@@ -31,10 +33,13 @@ class PolicyGradientTrainer(object):
                 reward = self.env.perform_move(Move(Side.SOUTH, action))
                 self.agent.store_rollout(state, action, reward, valid_actions_mask)
             else:
-                state = self.env.board.get_board_image(flipped=True)
-                valid_actions_mask = self.env.get_actions_mask()
-                action = self.opponent.sample_action(state, valid_actions_mask)
-                _ = self.env.perform_move(Move(Side.NORTH, action))
+                # state = self.env.board.get_board_image(flipped=True)
+                # valid_actions_mask = self.env.get_actions_mask()
+                # action = self.opponent.sample_action(state, valid_actions_mask)
+                # _ = self.env.perform_move(Move(Side.NORTH, action))
+
+                action = np.random.choice(self.env.get_legal_moves())
+                _ = self.env.perform_move(action)
 
         self.turns_history.append(self.turns)
         self.games += 1
@@ -58,24 +63,34 @@ class PolicyGradientTrainer(object):
         return south_wins / 100.0
 
     def train(self, games=100000):
-        for t in range(games):
+        start_time = time\
+            .time()
+        for game_no in range(games):
             self.policy_rollout()
-            south_loss = self.agent.run_train_step()
+            south_loss = self.agent.run_train_step(game_no)
 
-            if t % 100 == 0:
-                print('Agent loss: {} | Average reward: {}'.format(south_loss, self.agent.get_average_reward()))
-                print('Avg number of turns: {}'.format(np.mean(self.turns_history)))
+            if game_no % 100 == 0:
                 print('South winning rate {}'.format(self.south_wins/self.games))
+
+                avg_turns_sum = tf.Summary()
+                avg_turns_sum.value.add(tag='avg_turns_sum', simple_value=np.mean(self.turns_history))
+                self.agent.writer.add_summary(avg_turns_sum, game_no)
+
+                avg_reward_sum = tf.Summary()
+                avg_reward_sum.value.add(tag='avg_reward_sum', simple_value=np.mean(self.agent.get_average_reward()))
+                self.agent.writer.add_summary(avg_reward_sum, game_no)
 
                 # Restart statistics every few games
                 self.south_wins = 0
                 self.games = 0
 
-            if t % 2000 == 0:
+            if game_no % 2000 == 0:
                 self.agent.transfer_params(self.opponent)
                 self.agent.save_model_params('south')
 
-                print('Winning rate against random: {}'.format(self.play_against_random()))
+                rand_game_sum = tf.Summary()
+                rand_game_sum.value.add(tag='rand_game_win_rate', simple_value=self.play_against_random())
+                self.agent.writer.add_summary(rand_game_sum, game_no)
 
 
 

@@ -33,13 +33,8 @@ class PolicyGradientAgent(object):
 
         self.build_model()
         self.configure_training_procedure()
+        self.define_summaries()
         tf.global_variables_initializer().run()
-
-        try:
-            self.restore_model_params('agent')
-            print('Successfully loaded checkpoint for {}.'.format(self.name))
-        except:
-            print('Successfully loaded checkpoint for {}.'.format(self.name))
 
     def build_model(self):
         self.board = tf.placeholder(tf.float32, shape=[None, self.board_size[0], self.board_size[1], 1],
@@ -58,10 +53,12 @@ class PolicyGradientAgent(object):
         indices = tf.range(0, tf.shape(self.logits)[0]) * tf.shape(self.logits)[1] + self.taken_actions
         self.picked_act_logits = tf.gather(tf.reshape(self.logits, [-1]), indices)
 
-        self.loss = -tf.reduce_mean(tf.multiply(self.picked_act_logits, self.discounted_rewards))
-
         t_vars = tf.trainable_variables()
         self.vars = [var for var in t_vars if 'policy_network_{}'.format(self.name) in var.name]
+
+        self.pg_loss = -tf.reduce_mean(tf.multiply(self.picked_act_logits, self.discounted_rewards))
+        self.reg_loss = tf.add_n([tf.nn.l2_loss(v) for v in self.vars])
+        self.loss = self.pg_loss + 0.01 * self.reg_loss
 
         self.saver = tf.train.Saver()
 
@@ -69,50 +66,30 @@ class PolicyGradientAgent(object):
         self.optimiser = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
         self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
 
+    def define_summaries(self):
+        self.loss_sum = tf.summary.scalar('loss_sum', self.loss)
+        self.action_prob_sum = tf.summary.tensor_summary('action_prob_sum', self.action_prob)
+        self.logits_sum = tf.summary.tensor_summary('logits_sum', self.logits)
+        self.out_sum = tf.summary.merge([self.action_prob_sum, self.logits_sum])
+
+        self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
+
     def policy_network(self, is_training=True, reuse=False):
         w_init = tfl.xavier_initializer()
         gamma_init = tf.random_normal_initializer(1., 0.02)
         epsilon = 1e-100
 
         with tf.variable_scope('policy_network_{}'.format(self.name), reuse=reuse):
-            net_h0 = tf.layers.conv2d(inputs=self.board, filters=8, kernel_size=2, strides=1, padding='SAME',
-                                      activation=tf.nn.relu, kernel_initializer=w_init, name='pg_h0/conv2d')
-            net_h1 = tf.layers.conv2d(inputs=net_h0, filters=16, kernel_size=2, padding='SAME', strides=1,
-                                      activation=None, kernel_initializer=w_init, name='pg_h1/conv2d')
-            net_h1 = batch_normalization(net_h1, is_training=is_training, initializer=gamma_init,
-                                         activation=tf.nn.relu, name='pg_h1/batch_norm')
-            net_h2 = tf.layers.conv2d(inputs=net_h1, filters=32, kernel_size=2, padding='SAME', strides=1,
-                                      activation=None, kernel_initializer=w_init, name='pg_h2/conv2d')
-            net_h2 = batch_normalization(net_h2, is_training=is_training, initializer=gamma_init,
-                                         activation=tf.nn.relu, name='pg_h2/batch_norm')
-
-            # Residual layer
-            net = tf.layers.conv2d(inputs=net_h2, filters=8, kernel_size=2, strides=(1, 1),
-                                   padding='SAME', activation=None, kernel_initializer=w_init,
-                                   name='pg_h3_res/conv2d')
-            net = batch_normalization(net, is_training=is_training, initializer=gamma_init,
-                                      activation=tf.nn.relu, name='pg_h3_res/batch_norm')
-            net = tf.layers.conv2d(inputs=net, filters=16, kernel_size=2, strides=(1, 1),
-                                   padding='SAME', activation=tf.nn.relu, kernel_initializer=w_init,
-                                   name='pg_h3_res/conv2d2')
-            net = batch_normalization(net, is_training=is_training, initializer=gamma_init,
-                                      activation=tf.nn.relu, name='pg_h3_res/batch_norm2')
-            net = tf.layers.conv2d(inputs=net, filters=32, kernel_size=2, strides=(1, 1),
-                                   padding='SAME', activation=None, kernel_initializer=w_init,
-                                   name='pg_h3_res/conv2d3')
-            net = batch_normalization(net, is_training=is_training, initializer=gamma_init,
-                                      activation=tf.nn.relu, name='pg_h3_res/batch_norm3')
-            net_h3 = tf.add(net_h2, net, name='pg_h3/add')
-            net_h3 = tf.nn.relu(net_h3, name='pg_h3/add_lrelu')
-
-            net_h4 = tf.layers.conv2d(inputs=net_h3, filters=1, kernel_size=2, padding='VALID', strides=1,
-                                      activation=None, kernel_initializer=w_init, name='pg_h4/cov2d')
-            net_h4 = batch_normalization(net_h4, is_training=is_training, initializer=gamma_init,
-                                         activation=tf.nn.relu, name='pg_h4/batch_norm')
-            net_h4 = tf.reshape(net_h4, shape=[-1, 7], name='pg_h4/reshaped')
-
-            logits = tf.layers.dense(inputs=net_h4, units=self.num_actions, activation=None,
+            flattened_imp = tf.contrib.layers.flatten(self.board)
+            net_h1 = tf.layers.dense(inputs=flattened_imp, units=10, activation=tf.nn.relu,
+                                     kernel_initializer=w_init, name='pg_h1')
+            net_h2 = tf.layers.dense(inputs=net_h1, units=10, activation=tf.nn.relu,
+                                     kernel_initializer=w_init, name='pg_h2')
+            net_h3 = tf.layers.dense(inputs=net_h2, units=10, activation=tf.nn.relu,
+                                     kernel_initializer=w_init, name='pg_h3')
+            logits = tf.layers.dense(inputs=net_h3, units=self.num_actions, activation=None,
                                      kernel_initializer=w_init, name='pg_logits')
+
             exp_logits = tf.exp(logits, name='pg_exp_logits')
             action_prob = (exp_logits * self.valid_action_mask) \
                 / (tf.reduce_sum(exp_logits * self.valid_action_mask) + epsilon)
@@ -124,8 +101,11 @@ class PolicyGradientAgent(object):
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        action_prob = self.sess.run(self.action_prob, feed_dict=feed_dict)
+        action_prob, out_sum = self.sess.run([self.action_prob, self.out_sum], feed_dict=feed_dict)
         action_prob = np.ndarray.flatten(action_prob)
+
+        self.writer.add_summary(out_sum)
+
         return np.random.choice(self.num_actions, p=action_prob)
 
     def get_best_action(self, board, valid_action_mask):
@@ -137,16 +117,16 @@ class PolicyGradientAgent(object):
         action_prob = np.ndarray.flatten(action_prob)
         return np.argmax(action_prob)
 
-    def run_train_step(self):
+    def run_train_step(self, counter):
         feed_dict = {
             self.board: self.states,
             self.taken_actions: self.actions,
             self.discounted_rewards: self.compute_discounted_rewards(self.rewards),
             self.valid_action_mask: self.masks,
         }
-        _, loss = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
+        _, loss, loss_sum = self.sess.run([self.train_op, self.loss, self.loss_sum], feed_dict=feed_dict)
         self.clean_up_rollout()
-
+        self.writer.add_summary(loss_sum, counter)
         return loss
 
     def get_average_reward(self):
