@@ -7,90 +7,88 @@ from magent.move import Move
 import numpy as np
 from collections import deque
 import tensorflow as tf
+import random
 
 
 class PolicyGradientTrainer(object):
 
-    def __init__(self, agent: PolicyGradientAgent, opponent: PolicyGradientAgent, env: MancalaEnv):
+    def __init__(self, agent: PolicyGradientAgent, env: MancalaEnv, period=200, backup_period=2000, games=100000):
         self.agent = agent
-        self.opponent = opponent
         self.env = env
+        self.period = period
+        self.backup_period = backup_period
+        self.games_to_play = games
 
         self.turns_history = deque([], 10)
         self.games = 0
-        self.south_wins = 0
+        self.wins = 0
 
-    def policy_rollout(self):
+        # Tensorboard statistics
+        self.win_rate_sum = tf.Summary()
+        self.avg_turns_sum = tf.Summary()
+        self.avg_reward_sum = tf.Summary()
+
+    def policy_rollout(self, south_policy, north_policy):
         # Reset the environment to make sure everything starts in a clean state.
         self.env.reset()
         self.turns = 0
         while not self.env.is_game_over():
             self.turns += 1
             if self.env.side_to_move == Side.SOUTH:
-                state = self.env.board.get_board_image()
-                valid_actions_mask = self.env.get_actions_mask()
-                action = self.agent.sample_action(state, valid_actions_mask)
-                reward = self.env.perform_move(Move(Side.SOUTH, action))
-                self.agent.store_rollout(state, action, reward, valid_actions_mask)
+                south_policy()
             else:
-                action = np.random.choice(self.env.get_legal_moves())
-                _ = self.env.perform_move(action)
+                north_policy()
 
-        if self.env.get_winner() == Side.SOUTH:
-            self.agent.rewards[-1] = 500
-        elif self.env.get_winner() == Side.NORTH:
-            self.agent.rewards[-1] = -500
+    def random_policy(self):
+        action = np.random.choice(self.env.get_legal_moves())
+        _ = self.env.perform_move(action)
 
-        self.turns_history.append(self.turns)
-        self.games += 1
-        self.south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
+    def pg_train_policy(self):
+        flip_board = self.env.side_to_move == Side.NORTH
+        state = self.env.board.get_board_image(flipped=flip_board)
+        valid_actions_mask = self.env.get_actions_mask()
 
-    def play_against_random(self) -> float:
-        south_wins = 0
-        for g in range(100):
-            self.env.reset()
-            while not self.env.is_game_over():
-                self.turns += 1
-                if self.env.side_to_move == Side.SOUTH:
-                    state = self.env.board.get_board_image()
-                    valid_actions_mask = self.env.get_actions_mask()
-                    action = self.agent.get_best_action(state, valid_actions_mask)
-                    _ = self.env.perform_move(Move(Side.SOUTH, action))
-                else:
-                    action = np.random.choice(self.env.get_legal_moves())
-                    _ = self.env.perform_move(action)
-            south_wins += 1 if self.env.get_winner() == Side.SOUTH else 0
-        return south_wins / 100.0
+        action = self.agent.sample_action(state, valid_actions_mask)
+        reward = self.env.perform_move(Move(self.agent_side, action))
+        self.agent.store_rollout(state, action, reward, valid_actions_mask)
 
-    def train(self, games=100000):
-        start_time = time\
-            .time()
-        for game_no in range(games):
-            self.policy_rollout()
-            south_loss = self.agent.run_train_step(game_no)
+    def train(self):
+        start_time = time.time()
+        for game_no in range(self.games_to_play):
+            self.agent_side = Side.SOUTH if random.randint(0, 1) == 0 else Side.NORTH
+            if self.agent_side == Side.SOUTH:
+                self.policy_rollout(self.pg_train_policy, self.random_policy)
+            else:
+                self.policy_rollout(self.random_policy, self.pg_train_policy)
 
-            if game_no % 200 == 0:
-                print('South winning rate {}'.format(self.south_wins/self.games))
+            # Add the final reward to the agent's list of rewards
+            # If the agent didn't make the last move then the final reward must be added here.
+            self.agent.rewards[-1] = self.env.compute_reward(self.agent_side)
 
-                avg_turns_sum = tf.Summary()
-                avg_turns_sum.value.add(tag='avg_turns_sum', simple_value=np.mean(self.turns_history))
-                self.agent.writer.add_summary(avg_turns_sum, game_no)
+            self.games += 1
+            if self.env.get_winner() == self.agent_side:
+                self.wins += 1
 
-                avg_reward_sum = tf.Summary()
-                avg_reward_sum.value.add(tag='avg_reward_sum', simple_value=np.mean(self.agent.get_average_reward()))
-                self.agent.writer.add_summary(avg_reward_sum, game_no)
+            if game_no % self.period == 0:
+                running_time = (time.time() - start_time) / 60.0
+                print('Games played: [%2d] Elapsed minutes: %4.4f' % (game_no, running_time))
+                print('Agent winning rate {}'.format(self.wins/self.games))
+
+                self.win_rate_sum.value.add(tag='win_rate', simple_value=self.wins/self.games)
+                self.agent.writer.add_summary(self.win_rate_sum, game_no)
+
+                self.avg_turns_sum.value.add(tag='avg_turns_sum', simple_value=np.mean(self.turns_history))
+                self.agent.writer.add_summary(self.avg_turns_sum, game_no)
+
+                self.avg_reward_sum.value.add(tag='avg_reward_sum', simple_value=np.mean(self.agent.get_average_reward()))
+                self.agent.writer.add_summary(self.avg_reward_sum, game_no)
 
                 # Restart statistics every few games
-                self.south_wins = 0
+                self.wins = 0
                 self.games = 0
 
-            if game_no % 2000 == 0:
-                self.agent.transfer_params(self.opponent)
-                self.agent.save_model_params('south')
-
-                rand_game_sum = tf.Summary()
-                rand_game_sum.value.add(tag='rand_game_win_rate', simple_value=self.play_against_random())
-                self.agent.writer.add_summary(rand_game_sum, game_no)
+            if game_no % self.backup_period == 0:
+                self.agent.save_model_params(self.agent.name)
 
 
 
