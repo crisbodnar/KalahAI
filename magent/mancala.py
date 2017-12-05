@@ -74,7 +74,7 @@ class MancalaEnv(object):
 
         # Reward actions which produce consecutive moves
         if self.side_to_move == side:
-            reward += 40
+            reward += 50
 
         return reward
 

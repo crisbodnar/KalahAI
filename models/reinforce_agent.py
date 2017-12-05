@@ -9,7 +9,7 @@ class PolicyGradientAgent(object):
 
     """This is an implementation of an RL agent using the REINFORCE Policy Gradient algorithm"""
     def __init__(self, sess: tf.Session, discount=0.95, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
-                 name='agent_name', checkpoint_dir='models/checkpoints/'):
+                 name='agent_name', checkpoint_dir='models/checkpoints/', load_model=False):
         self.sess = sess
         self.discount = discount
         self.board_size = board_size
@@ -38,7 +38,13 @@ class PolicyGradientAgent(object):
         self.build_model()
         self.configure_training_procedure()
         self.define_summaries()
-        tf.global_variables_initializer().run()
+
+        parameters_loaded = False
+        if load_model:
+            parameters_loaded = self.restore_model_params(self.name)
+
+        if not parameters_loaded:
+            tf.global_variables_initializer().run()
 
     def build_model(self):
         self.board = tf.placeholder(tf.float32, shape=[None, self.board_size[0], self.board_size[1], 1],
@@ -136,7 +142,7 @@ class PolicyGradientAgent(object):
                                                      feed_dict=feed_dict)
         action_prob = np.ndarray.flatten(action_prob)
 
-        self.writer.add_summary(out_sum)
+        #self.writer.add_summary(out_sum)
         # print(board)
         # print(valid_action_mask)
         # print(logits)
@@ -202,9 +208,16 @@ class PolicyGradientAgent(object):
             os.makedirs(self.checkpoint_dir)
         self.saver.save(self.sess, path)
 
-    def restore_model_params(self, file):
+    def restore_model_params(self, file) -> bool:
         path = os.path.join(self.checkpoint_dir, file)
-        self.saver.restore(self.sess, path)
+        ckpt = tf.train.get_checkpoint_state(path)
+        if ckpt and ckpt.model_checkpoint_path:
+            self.saver.restore(self.sess, path)
+            print('Loaded parameters successfully')
+            return True
+
+        print('Failed to load model parameters')
+        return False
 
     def transfer_params(self, other_agent):
         transfer_op = [other_var.assign(this_var.value()) for other_var, this_var in zip(other_agent.vars, self.vars)]
