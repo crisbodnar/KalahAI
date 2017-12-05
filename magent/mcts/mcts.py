@@ -30,8 +30,9 @@ class MCTS(object):
 
 
 mcts_presets = {
-    'standard-mcts': MCTS(tree_policy=tree_factory('monte-carlo'), default_policy=default_factory('monte-carlo'),
-                          time_sec=30)
+    'standard-mcts': MCTS(tree_policy=tree_factory('monte-carlo'),
+                          default_policy=default_factory('monte-carlo'),
+                          time_sec=60)
 }
 
 

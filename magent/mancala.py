@@ -112,7 +112,7 @@ class MancalaEnv(object):
     @staticmethod
     def get_state_legal_actions(board: Board, side: Side, north_moved: bool) -> List[Move]:
         # If this is the first move of NORTH, then NORTH can use the pie rule action
-        legal_moves = [] if north_moved or side == side.SOUTH else [Move(side, -1)]
+        legal_moves = [] if north_moved or side == side.SOUTH else [Move(side, 0)]
         for i in range(1, board.holes + 1):
             if board.board[side.get_index(side)][i] > 0:
                 legal_moves.append(Move(side, i))
@@ -153,7 +153,7 @@ class MancalaEnv(object):
                                                                                            north_moved))
 
         # This is a pie move
-        if move.index == -1:
+        if move.index == 0:
             MancalaEnv.switch_sides(board)
             return Side.opposite(move.side)
 
