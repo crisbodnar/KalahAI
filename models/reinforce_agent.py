@@ -8,7 +8,7 @@ from models.ops import batch_normalization
 class PolicyGradientAgent(object):
 
     """This is an implementation of an RL agent using the REINFORCE Policy Gradient algorithm"""
-    def __init__(self, sess: tf.Session, discount=0.85, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
+    def __init__(self, sess: tf.Session, discount=0.95, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
                  name='agent_name', checkpoint_dir='models/checkpoints/'):
         self.sess = sess
         self.discount = discount
@@ -28,6 +28,10 @@ class PolicyGradientAgent(object):
         self.actions = []
         self.rewards = []
         self.masks = []
+
+        # Network parameters
+        self.lr = 0.001
+        self.decay = 0.9
 
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
 
@@ -63,7 +67,7 @@ class PolicyGradientAgent(object):
         self.loss = self.pg_loss  # + 0.002 * self.reg_loss
 
         # Define the optimiser to compute the gradients
-        self.optimiser = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
+        self.optimiser = tf.train.RMSPropOptimizer(learning_rate=self.lr, decay=self.decay)
         self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
 
         # Create a saver to backup the weights during training
@@ -78,7 +82,7 @@ class PolicyGradientAgent(object):
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
 
     def policy_network(self, is_training=True, reuse=False):
-        w_init = tfl.xavier_initializer(uniform=True)
+        w_init = tf.random_normal_initializer(stddev=0.02)
         gamma_init = tf.random_normal_initializer(1., 0.02)
 
         with tf.variable_scope('policy_network_{}'.format(self.name), reuse=reuse):

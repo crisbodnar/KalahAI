@@ -29,12 +29,17 @@ class PolicyGradientTrainer(object):
             if self.env.side_to_move == Side.SOUTH:
                 state = self.env.board.get_board_image()
                 valid_actions_mask = self.env.get_actions_mask()
-                action = self.agent.sample_action(np.array(state), valid_actions_mask)
+                action = self.agent.sample_action(state, valid_actions_mask)
                 reward = self.env.perform_move(Move(Side.SOUTH, action))
                 self.agent.store_rollout(state, action, reward, valid_actions_mask)
             else:
                 action = np.random.choice(self.env.get_legal_moves())
                 _ = self.env.perform_move(action)
+
+        if self.env.get_winner() == Side.SOUTH:
+            self.agent.rewards[-1] = 500
+        elif self.env.get_winner() == Side.NORTH:
+            self.agent.rewards[-1] = -500
 
         self.turns_history.append(self.turns)
         self.games += 1
@@ -64,7 +69,7 @@ class PolicyGradientTrainer(object):
             self.policy_rollout()
             south_loss = self.agent.run_train_step(game_no)
 
-            if game_no % 100 == 0:
+            if game_no % 200 == 0:
                 print('South winning rate {}'.format(self.south_wins/self.games))
 
                 avg_turns_sum = tf.Summary()
