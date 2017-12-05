@@ -6,52 +6,46 @@ from magent.protocol.msg_type import MsgType
 from magent.protocol.move_turn import MoveTurn
 from magent.protocol.invalid_message_exception import InvalidMessageException
 
-"""
-    Send a message to the game engine.
-    @:param msg the message
-"""
-
 
 def send_msg(msg: str):
+    """
+        Send a message to the game engine.
+        @:param msg the message
+    """
     logging.info("Message to be sent: " + msg)
     print(msg, end="\n")
     sys.stdout.flush()
 
 
-"""
-    Receives a message from the game engine. Messages are terminated by 
-    a '\n' character.
-    
-    @:return The message.
-    @:raise IOException if there has been an I/O error.
-"""
-
-
 def read_msg() -> str:
+    """
+        Receives a message from the game engine. Messages are terminated by
+        a '\n' character.
+
+        @:return The message.
+        @:raise IOException if there has been an I/O error.
+    """
+
     msg = sys.stdin.readline()
     logging.debug('Received: ' + msg)
     return msg
 
 
-"""
- Creates a move message.
- @:param hole The hole to pick the seeds from.
- @:return The message as a string.
-"""
-
-
 def create_move_msg(hole: int) -> str:
+    """
+        Creates a move message.
+        @:param hole The hole to pick the seeds from.
+        @:return The message as a string.
+    """
     return "MOVE;" + str(hole)
 
 
-"""
-    Create a swap message.
-    
-    @:returnThe message as a string
-"""
-
-
 def create_swap_msg() -> str:
+    """
+        Create a swap message.
+
+        @:returnThe message as a string
+    """
     logging.info("We swapped")
     return "SWAP"
 
@@ -70,16 +64,14 @@ def get_msg_type(msg: str) -> MsgType:
         raise InvalidMessageException("Could not determine message type.")
 
 
-"""
-    Interprets a "new_match" message. Should be called if 
-    getMessageType(msg) returns MsgType.START
-    @:param msg The message.
-    @:return "true" if this agent is the starting player (South), "false" otherwise.
-    @:raises InvalidMessageException if the message is not well-formed.
-"""
-
-
 def interpret_start_msg(msg: str) -> bool:
+    """
+        Interprets a "new_match" message. Should be called if
+        getMessageType(msg) returns MsgType.START
+        @:param msg The message.
+        @:return "true" if this agent is the starting player (South), "false" otherwise.
+        @:raises InvalidMessageException if the message is not well-formed.
+    """
     if msg[-1] != '\n':
         raise InvalidMessageException("Message not terminated with 0x0A character.")
 
@@ -93,22 +85,20 @@ def interpret_start_msg(msg: str) -> bool:
         raise InvalidMessageException("Illegal position parameter: " + position)
 
 
-"""
-    Interprets a "state_change" message. Should be called if
-    getMessageType(msg) returns MsgType.STATE
-    
-    @:param msg   The message.
-    @:param board This is an output parameter. It will store the new state
-                 of the Mancala board. The board has to have the right dimensions
-                 (number of holes), otherwise an InvalidMessageException is
-                 thrown.
-    @:return information about the move that led to the state change and
-    who's turn it is next.
-    @:raises InvalidMessageException if the message is not well-formed.
-"""
-
-
 def interpret_state_msg(msg: str, board: Board) -> MoveTurn:
+    """
+        Interprets a "state_change" message. Should be called if
+        getMessageType(msg) returns MsgType.STATE
+
+        @:param msg   The message.
+        @:param board This is an output parameter. It will store the new state
+                     of the Mancala board. The board has to have the right dimensions
+                     (number of holes), otherwise an InvalidMessageException is
+                     thrown.
+        @:return information about the move that led to the state change and
+        who's turn it is next.
+        @:raises InvalidMessageException if the message is not well-formed.
+    """
     move_turn = MoveTurn()
     if msg[-1] != '\n':
         raise InvalidMessageException("Message not terminated with 0x0A character.")

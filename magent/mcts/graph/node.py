@@ -23,7 +23,7 @@ class Node(object):
     def unvisited_children(self):
         nodes = []
         for child in self.children:
-            if child.visits <= 1:
+            if child.visits < 1:
                 nodes.append(child)
         return nodes
 
