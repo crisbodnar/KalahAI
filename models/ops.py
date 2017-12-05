@@ -9,7 +9,7 @@ def batch_normalization(x, is_training, initializer, activation, name):
                                              decay=momentum,
                                              epsilon=epsilon,
                                              scale=True,
-                                             param_initializers=initializer,
+                                             param_initializers=None,
                                              is_training=is_training,
                                              scope=name,
                                              updates_collections=None)
