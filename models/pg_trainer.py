@@ -43,7 +43,6 @@ class PolicyGradientTrainer(object):
 
         self.turns_history.append(self.turns)
 
-
     def random_policy(self):
         action = np.random.choice(self.env.get_legal_moves())
         _ = self.env.perform_move(action)
@@ -54,7 +53,12 @@ class PolicyGradientTrainer(object):
         valid_actions_mask = self.env.get_actions_mask()
 
         action = self.agent.sample_action(state, valid_actions_mask)
-        reward = self.env.perform_move(Move(self.agent_side, action))
+
+        seeds_in_store_before = self.env.board.get_seeds_in_store(self.agent_side)
+        self.env.perform_move(Move(self.agent_side, action))
+
+        seeds_in_store_after = self.env.board.get_seeds_in_store(self.agent_side)
+        reward = (seeds_in_store_after - seeds_in_store_before) / 10.0
         self.agent.store_rollout(state, action, reward, valid_actions_mask)
 
     def train(self):
