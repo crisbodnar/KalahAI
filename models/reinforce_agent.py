@@ -45,26 +45,28 @@ class PolicyGradientAgent(object):
         self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
-        _, self.logits = self.policy_network(is_training=self.is_training, reuse=self.reuse)
-        self.action_prob, _ = self.policy_network(is_training=False, reuse=True)
+        self.action_prob, self.logits = self.policy_network(is_training=self.is_training, reuse=self.reuse)
 
     def configure_training_procedure(self):
-        # get log probs of actions from episode
-        indices = tf.range(0, tf.shape(self.logits)[0]) * tf.shape(self.logits)[1] + self.taken_actions
-        self.picked_act_logits = tf.gather(tf.reshape(self.logits, [-1]), indices)
+        # Get the probability of the selected actions in te episode
+        picked_action_mask = tf.one_hot(self.taken_actions, self.num_actions, 1.0, 0.0)
+        self.picked_action_prob = tf.reduce_sum(self.action_prob * picked_action_mask, 1)
 
+        # Get all the weights to be trained
         t_vars = tf.trainable_variables()
         self.vars = [var for var in t_vars if 'policy_network_{}'.format(self.name) in var.name]
 
-        self.pg_loss = -tf.reduce_mean(tf.multiply(self.picked_act_logits, self.discounted_rewards))
+        # Define the losses
+        self.pg_loss = tf.reduce_mean(-tf.log(self.picked_action_prob) * self.discounted_rewards)
         self.reg_loss = tf.add_n([tf.nn.l2_loss(v) for v in self.vars])
         self.loss = self.pg_loss + 0.01 * self.reg_loss
 
-        self.saver = tf.train.Saver()
-
-        # compute gradients
+        # Define the optimiser to compute the gradients
         self.optimiser = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
         self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
+
+        # Create a saver to backup the weights during training
+        self.saver = tf.train.Saver()
 
     def define_summaries(self):
         self.loss_sum = tf.summary.scalar('loss_sum', self.loss)
@@ -75,9 +77,9 @@ class PolicyGradientAgent(object):
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
 
     def policy_network(self, is_training=True, reuse=False):
-        w_init = tfl.xavier_initializer()
+        w_init = tfl.xavier_initializer(uniform=False)
         gamma_init = tf.random_normal_initializer(1., 0.02)
-        epsilon = 1e-100
+        epsilon = 1e-20
 
         with tf.variable_scope('policy_network_{}'.format(self.name), reuse=reuse):
             flattened_imp = tf.contrib.layers.flatten(self.board)
@@ -90,21 +92,28 @@ class PolicyGradientAgent(object):
             logits = tf.layers.dense(inputs=net_h3, units=self.num_actions, activation=None,
                                      kernel_initializer=w_init, name='pg_logits')
 
-            exp_logits = tf.exp(logits, name='pg_exp_logits')
+            # Make the logits numerically stable for computing the softmax
+            stable_logits = tf.identity(logits - tf.reduce_max(tf.abs(logits), axis=0), name='pg_stable_logits')
+
+            # Compute the unnormalised probabilities
+            exp_logits = tf.exp(stable_logits, name='pg_unnormal_prob')
+
+            # Compute probabilities taking into account only the valid actions
             action_prob = (exp_logits * self.valid_action_mask) \
                 / (tf.reduce_sum(exp_logits * self.valid_action_mask) + epsilon)
 
-            return action_prob, logits
+            return action_prob, stable_logits
 
     def sample_action(self, board, valid_action_mask):
         feed_dict = {
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        action_prob, out_sum = self.sess.run([self.action_prob, self.out_sum], feed_dict=feed_dict)
+        action_prob, logits, out_sum = self.sess.run([self.action_prob, self.logits, self.out_sum], feed_dict=feed_dict)
         action_prob = np.ndarray.flatten(action_prob)
 
         self.writer.add_summary(out_sum)
+        # print(logits)
 
         return np.random.choice(self.num_actions, p=action_prob)
 
