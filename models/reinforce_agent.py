@@ -8,7 +8,7 @@ from models.ops import batch_normalization
 class PolicyGradientAgent(object):
 
     """This is an implementation of an RL agent using the REINFORCE Policy Gradient algorithm"""
-    def __init__(self, sess: tf.Session, discount=0.99, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
+    def __init__(self, sess: tf.Session, discount=0.85, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
                  name='agent_name', checkpoint_dir='models/checkpoints/'):
         self.sess = sess
         self.discount = discount
@@ -29,9 +29,6 @@ class PolicyGradientAgent(object):
         self.rewards = []
         self.masks = []
 
-        # Set parameters of the netwokr
-        self.lr = 0.5
-
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
 
         self.build_model()
@@ -48,7 +45,8 @@ class PolicyGradientAgent(object):
         self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
-        self.action_prob, self.logits = self.policy_network(is_training=self.is_training, reuse=self.reuse)
+        self.action_prob, self.logits = self.policy_network(is_training=False, reuse=self.reuse)
+        self.action_prob_sampler, _ = self.policy_network(is_training=False, reuse=True)
 
     def configure_training_procedure(self):
         # Get the probability of the selected actions in te episode
@@ -60,13 +58,12 @@ class PolicyGradientAgent(object):
         self.vars = [var for var in t_vars if 'policy_network_{}'.format(self.name) in var.name]
 
         # Define the losses
-        eps = 1e-20
-        self.pg_loss = tf.reduce_mean(-tf.log(self.picked_action_prob + eps) * self.discounted_rewards)
-        self.reg_loss = tf.add_n([tf.nn.l2_loss(v) for v in self.vars])
-        self.loss = self.pg_loss + 0.002 * self.reg_loss
+        self.pg_loss = tf.reduce_mean(-tf.log(self.picked_action_prob) * self.discounted_rewards)
+        # self.reg_loss = tf.add_n([tf.nn.l2_loss(v) for v in self.vars])
+        self.loss = self.pg_loss  # + 0.002 * self.reg_loss
 
         # Define the optimiser to compute the gradients
-        self.optimiser = tf.train.AdamOptimizer(learning_rate=self.lr)
+        self.optimiser = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
         self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
 
         # Create a saver to backup the weights during training
@@ -81,19 +78,37 @@ class PolicyGradientAgent(object):
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
 
     def policy_network(self, is_training=True, reuse=False):
-        w_init = tfl.xavier_initializer(uniform=False)
+        w_init = tfl.xavier_initializer(uniform=True)
         gamma_init = tf.random_normal_initializer(1., 0.02)
-        epsilon = 1e-20
 
         with tf.variable_scope('policy_network_{}'.format(self.name), reuse=reuse):
             flattened_imp = tf.contrib.layers.flatten(self.board)
-            net_h1 = tf.layers.dense(inputs=flattened_imp, units=10, activation=tf.nn.relu,
+            net_h1 = tf.layers.dense(inputs=flattened_imp, units=10, activation=None,
                                      kernel_initializer=w_init, name='pg_h1')
-            net_h2 = tf.layers.dense(inputs=net_h1, units=10, activation=tf.nn.relu,
+            net_h1 = batch_normalization(net_h1, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h1/batch_norm')
+
+            net_h2 = tf.layers.dense(inputs=net_h1, units=10, activation=None,
                                      kernel_initializer=w_init, name='pg_h2')
-            net_h3 = tf.layers.dense(inputs=net_h2, units=10, activation=tf.nn.relu,
+            net_h2 = batch_normalization(net_h2, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h2/batch_norm')
+
+            net_h3 = tf.layers.dense(inputs=net_h2, units=10, activation=None,
                                      kernel_initializer=w_init, name='pg_h3')
-            logits = tf.layers.dense(inputs=net_h3, units=self.num_actions, activation=None,
+            net_h3 = batch_normalization(net_h3, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h3/batch_norm')
+
+            net_h4 = tf.layers.dense(inputs=net_h3, units=10, activation=None,
+                                     kernel_initializer=w_init, name='pg_h4')
+            net_h4 = batch_normalization(net_h4, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h4/batch_norm')
+
+            net_h5 = tf.layers.dense(inputs=net_h4, units=10, activation=None,
+                                     kernel_initializer=w_init, name='pg_h5')
+            net_h5 = batch_normalization(net_h5, is_training=is_training, initializer=gamma_init,
+                                         activation=tf.nn.relu, name='pg_h5/batch_norm')
+
+            logits = tf.layers.dense(inputs=net_h5, units=self.num_actions, activation=None,
                                      kernel_initializer=w_init, name='pg_logits')
 
             # Make the logits numerically stable for computing the softmax
@@ -113,7 +128,8 @@ class PolicyGradientAgent(object):
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        action_prob, logits, out_sum = self.sess.run([self.action_prob, self.logits, self.out_sum], feed_dict=feed_dict)
+        action_prob, logits, out_sum = self.sess.run([self.action_prob_sampler, self.logits, self.out_sum],
+                                                     feed_dict=feed_dict)
         action_prob = np.ndarray.flatten(action_prob)
 
         self.writer.add_summary(out_sum)
