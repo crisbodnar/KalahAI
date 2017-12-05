@@ -33,11 +33,6 @@ class PolicyGradientTrainer(object):
                 reward = self.env.perform_move(Move(Side.SOUTH, action))
                 self.agent.store_rollout(state, action, reward, valid_actions_mask)
             else:
-                # state = self.env.board.get_board_image(flipped=True)
-                # valid_actions_mask = self.env.get_actions_mask()
-                # action = self.opponent.sample_action(state, valid_actions_mask)
-                # _ = self.env.perform_move(Move(Side.NORTH, action))
-
                 action = np.random.choice(self.env.get_legal_moves())
                 _ = self.env.perform_move(action)
 
