@@ -29,6 +29,9 @@ class PolicyGradientAgent(object):
         self.rewards = []
         self.masks = []
 
+        # Set parameters of the netwokr
+        self.lr = 0.5
+
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
 
         self.build_model()
@@ -57,12 +60,13 @@ class PolicyGradientAgent(object):
         self.vars = [var for var in t_vars if 'policy_network_{}'.format(self.name) in var.name]
 
         # Define the losses
-        self.pg_loss = tf.reduce_mean(-tf.log(self.picked_action_prob) * self.discounted_rewards)
+        eps = 1e-20
+        self.pg_loss = tf.reduce_mean(-tf.log(self.picked_action_prob + eps) * self.discounted_rewards)
         self.reg_loss = tf.add_n([tf.nn.l2_loss(v) for v in self.vars])
-        self.loss = self.pg_loss + 0.01 * self.reg_loss
+        self.loss = self.pg_loss + 0.002 * self.reg_loss
 
         # Define the optimiser to compute the gradients
-        self.optimiser = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
+        self.optimiser = tf.train.AdamOptimizer(learning_rate=self.lr)
         self.train_op = self.optimiser.minimize(self.loss, var_list=self.vars)
 
         # Create a saver to backup the weights during training
@@ -93,16 +97,16 @@ class PolicyGradientAgent(object):
                                      kernel_initializer=w_init, name='pg_logits')
 
             # Make the logits numerically stable for computing the softmax
-            stable_logits = tf.identity(logits - tf.reduce_max(tf.abs(logits), axis=0), name='pg_stable_logits')
+            # stable_logits = tf.identity(logits - tf.reduce_max(logits, axis=0), name='pg_stable_logits')
 
             # Compute the unnormalised probabilities
-            exp_logits = tf.exp(stable_logits, name='pg_unnormal_prob')
+            exp_logits = tf.exp(logits, name='pg_unnormal_prob')
+            valid_exp_logits = exp_logits * self.valid_action_mask
 
             # Compute probabilities taking into account only the valid actions
-            action_prob = (exp_logits * self.valid_action_mask) \
-                / (tf.reduce_sum(exp_logits * self.valid_action_mask) + epsilon)
+            action_prob = valid_exp_logits / tf.reduce_sum(valid_exp_logits)
 
-            return action_prob, stable_logits
+            return action_prob, logits
 
     def sample_action(self, board, valid_action_mask):
         feed_dict = {
@@ -113,7 +117,10 @@ class PolicyGradientAgent(object):
         action_prob = np.ndarray.flatten(action_prob)
 
         self.writer.add_summary(out_sum)
+        # print(board)
+        # print(valid_action_mask)
         # print(logits)
+        # print(action_prob)
 
         return np.random.choice(self.num_actions, p=action_prob)
 
