@@ -1,7 +1,7 @@
 import time
 
 from magent.mancala import MancalaEnv
-from models.reinforce_agent import PolicyGradientAgent
+from models.pgrad.reinforce_agent import PolicyGradientAgent
 from magent.side import Side
 from magent.move import Move
 import numpy as np

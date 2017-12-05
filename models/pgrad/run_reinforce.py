@@ -1,5 +1,5 @@
-from models.reinforce_agent import PolicyGradientAgent
-from models.pg_trainer import PolicyGradientTrainer
+from models.pgrad.reinforce_agent import PolicyGradientAgent
+from models.pgrad.pg_trainer import PolicyGradientTrainer
 from magent.mancala import MancalaEnv
 import tensorflow as tf
 

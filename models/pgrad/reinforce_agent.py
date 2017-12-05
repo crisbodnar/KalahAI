@@ -1,8 +1,6 @@
 import tensorflow as tf
-import tensorflow.contrib.layers as tfl
 import numpy as np
 import os
-from models.ops import batch_normalization
 
 
 class PolicyGradientAgent(object):
