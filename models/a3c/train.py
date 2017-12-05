@@ -15,7 +15,7 @@ gamma = .99  # discount rate for advantage estimation and reward discounting
 s_size = 7056  # Observations are greyscale frames of 84 * 84 * 1
 a_size = 8  # Agent can move Left, Right, or Fire
 load_model = False
-model_path = './model'
+model_path = './checkpoints/a3c'
 
 tf.reset_default_graph()
 

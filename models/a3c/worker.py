@@ -19,7 +19,7 @@ class Worker(object):
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter("train_" + str(self.number))
+        self.summary_writer = tf.summary.FileWriter("logs/a3c/train_" + str(self.number))
 
         # Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = ActorCriticNetwork(s_size, a_size, self.name, trainer)
@@ -135,9 +135,9 @@ class Worker(object):
                         saver.save(sess, self.model_path + '/model-' + str(episode_count) + '.cptk')
                         print("Saved Model")
 
-                    mean_reward = np.mean(self.episode_rewards[-5:])
-                    mean_length = np.mean(self.episode_lengths[-5:])
-                    mean_value = np.mean(self.episode_mean_values[-5:])
+                    mean_reward = np.mean(self.episode_rewards[-50:])
+                    mean_length = np.mean(self.episode_lengths[-50:])
+                    mean_value = np.mean(self.episode_mean_values[-50:])
                     summary = tf.Summary()
                     summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
                     summary.value.add(tag='Perf/Length', simple_value=float(mean_length))

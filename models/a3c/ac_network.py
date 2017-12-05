@@ -24,7 +24,7 @@ class ActorCriticNetwork(object):
             # Output layers for policy and value estimations
             logits = slim.fully_connected(net_h3, a_size, activation_fn=None,
                                           weights_initializer=normalized_columns_initializer(0.01),
-                                          biases_initializer=None, name='pg_logits')
+                                          biases_initializer=None)
             # Compute the unnormalised probabilities
             exp_logits = tf.exp(logits, name='pg_unnormal_prob')
             valid_exp_logits = exp_logits * self.valid_action_mask
