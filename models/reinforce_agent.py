@@ -30,7 +30,7 @@ class PolicyGradientAgent(object):
         self.masks = []
 
         # Network parameters
-        self.lr = 0.001
+        self.lr = 0.004
         self.decay = 0.9
 
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -55,8 +55,8 @@ class PolicyGradientAgent(object):
         self.discounted_rewards = tf.placeholder(tf.float32, shape=[None], name='discounted_rewards')
 
         # Outputs of the policy network
-        self.action_prob, self.logits = self.policy_network(is_training=False, reuse=self.reuse)
-        self.action_prob_sampler, _ = self.policy_network(is_training=False, reuse=True)
+        _, self.action_prob, self.logits = self.policy_network(is_training=False, reuse=self.reuse)
+        self.valid_action_prob, _, _ = self.policy_network(is_training=False, reuse=True)
 
     def configure_training_procedure(self):
         # Get the probability of the selected actions in te episode
@@ -129,16 +129,16 @@ class PolicyGradientAgent(object):
             valid_exp_logits = exp_logits * self.valid_action_mask
 
             # Compute probabilities taking into account only the valid actions
-            action_prob = valid_exp_logits / tf.reduce_sum(valid_exp_logits)
+            valid_action_prob = valid_exp_logits / tf.reduce_sum(valid_exp_logits)
 
-            return action_prob, logits
+            return valid_action_prob, tf.nn.softmax(logits), logits
 
     def sample_action(self, board, valid_action_mask):
         feed_dict = {
             self.board: board[np.newaxis, :],
             self.valid_action_mask: valid_action_mask[np.newaxis, :],
         }
-        action_prob, logits, out_sum = self.sess.run([self.action_prob_sampler, self.logits, self.out_sum],
+        action_prob, logits, out_sum = self.sess.run([self.valid_action_prob, self.logits, self.out_sum],
                                                      feed_dict=feed_dict)
         action_prob = np.ndarray.flatten(action_prob)
 
@@ -172,7 +172,7 @@ class PolicyGradientAgent(object):
         return loss
 
     def get_average_reward(self):
-        return np.mean(self.all_rewards)
+        return np.mean(self.all_rewards[-500:])
 
     def store_rollout(self, state, action, reward, mask):
         self.states.append(state)
@@ -210,14 +210,13 @@ class PolicyGradientAgent(object):
 
     def restore_model_params(self, file) -> bool:
         path = os.path.join(self.checkpoint_dir, file)
-        ckpt = tf.train.get_checkpoint_state(path)
-        if ckpt and ckpt.model_checkpoint_path:
+        try:
             self.saver.restore(self.sess, path)
             print('Loaded parameters successfully')
             return True
-
-        print('Failed to load model parameters')
-        return False
+        except:
+            print('Failed to load model parameters')
+            return False
 
     def transfer_params(self, other_agent):
         transfer_op = [other_var.assign(this_var.value()) for other_var, this_var in zip(other_agent.vars, self.vars)]

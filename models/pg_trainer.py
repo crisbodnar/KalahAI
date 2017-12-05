@@ -12,7 +12,7 @@ import random
 
 class PolicyGradientTrainer(object):
 
-    def __init__(self, agent: PolicyGradientAgent, env: MancalaEnv, period=200, backup_period=2000, games=100000):
+    def __init__(self, agent: PolicyGradientAgent, env: MancalaEnv, period=200, backup_period=2000, games=1000000):
         self.agent = agent
         self.env = env
         self.period = period
@@ -39,6 +39,11 @@ class PolicyGradientTrainer(object):
             else:
                 north_policy()
 
+            self.turns += 1
+
+        self.turns_history.append(self.turns)
+
+
     def random_policy(self):
         action = np.random.choice(self.env.get_legal_moves())
         _ = self.env.perform_move(action)
@@ -63,7 +68,8 @@ class PolicyGradientTrainer(object):
 
             # Add the final reward to the agent's list of rewards
             # If the agent didn't make the last move then the final reward must be added here.
-            self.agent.rewards[-1] = self.env.compute_reward(self.agent_side)
+            self.agent.rewards[-1] = self.env.compute_reward(self.agent_side) / self.turns
+            self.agent.run_train_step(game_no)
 
             self.games += 1
             if self.env.get_winner() == self.agent_side:
