@@ -49,7 +49,7 @@ class Board(object):
     def get_seeds_op(self, side: Side, hole: int):
         if hole < 1 or hole > self.holes:
             raise ValueError('Hole number must be between 1 and number of holes')
-        return self.board[Side.get_index(Side.opposite(side))][hole]
+        return self.board[Side.get_index(Side.opposite(side))][self.holes+1-hole]
 
     def set_seeds_op(self, side: Side, hole: int, seeds: int):
         if hole < 1 or hole > self.holes:
@@ -57,7 +57,7 @@ class Board(object):
         if seeds < 0:
             raise ValueError('There has to be a non-negative number of seeds')
 
-        self.board[Side.get_index(Side.opposite(side))][hole] = seeds
+        self.board[Side.get_index(Side.opposite(side))][self.holes+1-hole] = seeds
 
     def add_seeds(self, side: Side, hole: int, seeds: int):
         if hole < 1 or hole > self.holes:

@@ -25,7 +25,7 @@ def read_msg() -> str:
     """
 
     msg = sys.stdin.readline()
-    logging.debug('Received: ' + msg)
+    logging.info('Received: ' + msg)
     return msg
 
 

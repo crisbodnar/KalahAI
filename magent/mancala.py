@@ -195,7 +195,7 @@ class MancalaEnv(object):
         # Capture the opponent's seeds from the opposite hole if the last seed
         # is placed in an empty hole and there are seeds in the opposite hole
         if sow_side == move.side and sow_hole > 0 \
-                and board.get_seeds(sow_side, sow_hole) \
+                and board.get_seeds(sow_side, sow_hole) == 1 \
                 and board.get_seeds_op(sow_side, sow_hole) > 0:
             board.add_seeds_to_store(move.side, 1 + board.get_seeds_op(sow_side, sow_hole))
             board.set_seeds(move.side, sow_hole, 0)
@@ -213,6 +213,6 @@ class MancalaEnv(object):
             board.add_seeds_to_store(collecting_side, seeds)
 
         # Return the side which is next to move
-        if sow_hole == 0:
+        if sow_hole == 0 and (move.side == Side.NORTH or north_moved):
             return move.side  # Last seed was placed in the store, so side moves again
         return Side.opposite(move.side)
