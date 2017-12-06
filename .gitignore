@@ -6,3 +6,5 @@ target/
 *.class
 /models/checkpoints/
 logs/
+/checkpoints/
+

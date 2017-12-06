@@ -67,11 +67,8 @@ class MancalaEnv(object):
 
     def compute_reward(self, side: Side):
         """Returns a reward for the specified side for moving to the current state."""
-        if self.is_game_over():
-            return 1000 if self.get_winner() == side else -1000
-        if self.side_to_move == side:
-            return 10
-        return 0
+        reward = self.board.get_seeds_in_store(side) - self.board.get_seeds_in_store(Side.opposite(side))
+        return reward
 
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)

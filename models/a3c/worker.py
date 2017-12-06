@@ -38,7 +38,7 @@ class Worker(object):
         # generate the advantage and discounted returns.
         # The advantage function uses "Generalized Advantage Estimation"
         self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
-        discounted_rewards = discount(self.rewards_plus, gamma)[:-1]
+        discounted_rewards = discount(self.rewards_plus[:-1], gamma)
         self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
         advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantages = discount(advantages, gamma)
@@ -79,7 +79,7 @@ class Worker(object):
         self.env.perform_move(Move(self.agent_side, action))
         seeds_in_store_after = self.env.board.get_seeds_in_store(self.agent_side)
 
-        reward = (seeds_in_store_after - seeds_in_store_before) / 10.0
+        reward = (seeds_in_store_after - seeds_in_store_before) / 100.0
 
         self.episode_buffer.append([[state], action, reward, v[0, 0]])
         self.episode_values.append(v[0, 0])
@@ -106,7 +106,6 @@ class Worker(object):
                 self.episode_step_count = 0
 
                 self.env.reset()
-                s = self.env.board.get_board_image()
                 self.agent_side = Side.SOUTH if random.randint(0, 1) == 0 else Side.NORTH
                 if self.agent_side == Side.SOUTH:
                     self.policy_rollout(self.pg_train_policy, self.random_policy)
@@ -115,8 +114,8 @@ class Worker(object):
 
                 # Add the final reward to the agent's list of rewards
                 # If the agent didn't make the last move then the final reward must be added here.
-                self.episode_reward += self.env.compute_reward(self.agent_side) / self.episode_step_count
-                self.episode_buffer[2][-1] = self.env.compute_reward(self.agent_side) / self.episode_step_count
+                self.episode_reward += self.env.compute_reward(self.agent_side)
+                self.episode_buffer[-1][2] = self.env.compute_reward(self.agent_side)
 
                 self.played_games += 1
                 if self.env.get_winner() == self.agent_side:
@@ -130,30 +129,32 @@ class Worker(object):
                 v_l, p_l, e_l, g_n, v_n = self.train(self.episode_buffer, sess, gamma, 0.0)
 
                 # Periodically save gifs of episodes, model parameters, and summary statistics.
-                if episode_count % 5 == 0 and episode_count != 0:
+                if episode_count % 10 == 0 and episode_count != 0:
                     if episode_count % 250 == 0 and self.name == 'worker_0':
                         saver.save(sess, self.model_path + '/model-' + str(episode_count) + '.cptk')
                         print("Saved Model")
 
-                    mean_reward = np.mean(self.episode_rewards[-50:])
-                    mean_length = np.mean(self.episode_lengths[-50:])
-                    mean_value = np.mean(self.episode_mean_values[-50:])
+                    mean_reward = np.mean(self.episode_rewards[-10:])
+                    mean_length = np.mean(self.episode_lengths[-10:])
+                    mean_value = np.mean(self.episode_mean_values[-10:])
                     summary = tf.Summary()
                     summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
                     summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
                     summary.value.add(tag='Perf/Value', simple_value=float(mean_value))
-                    summary.value.add(tag='Perf/WinRate', simple_value=float(self.won_games/self.played_games))
                     summary.value.add(tag='Losses/Value Loss', simple_value=float(v_l))
                     summary.value.add(tag='Losses/Policy Loss', simple_value=float(p_l))
                     summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
                     summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
                     summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
+
+                    if episode_count % 250 == 0:
+                        summary.value.add(tag='Perf/WinRate', simple_value=float(self.won_games / self.played_games))
+                        self.played_games = 0
+                        self.won_games = 0
+
                     self.summary_writer.add_summary(summary, episode_count)
-
-                    self.played_games = 0
-                    self.won_games = 0
-
                     self.summary_writer.flush()
+
                 if self.name == 'worker_0':
                     sess.run(self.increment)
                 episode_count += 1
