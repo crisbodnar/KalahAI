@@ -1,7 +1,5 @@
 import unittest
-from magent.mancala import MancalaEnv
 from magent.side import Side
-from magent.move import Move
 
 
 class TestSide(unittest.TestCase):

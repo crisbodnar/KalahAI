@@ -108,7 +108,7 @@ class MancalaEnv(object):
             return not_finished_side
         return None
 
-    # Generate a set of all legal moves given a board state and a side
+    # Generate a list of all legal moves given a board state and a side
     @staticmethod
     def get_state_legal_actions(board: Board, side: Side, north_moved: bool) -> List[Move]:
         # If this is the first move of NORTH, then NORTH can use the pie rule action
@@ -195,7 +195,7 @@ class MancalaEnv(object):
         # Capture the opponent's seeds from the opposite hole if the last seed
         # is placed in an empty hole and there are seeds in the opposite hole
         if sow_side == move.side and sow_hole > 0 \
-                and board.get_seeds(sow_side, sow_hole) \
+                and board.get_seeds(sow_side, sow_hole) == 1 \
                 and board.get_seeds_op(sow_side, sow_hole) > 0:
             board.add_seeds_to_store(move.side, 1 + board.get_seeds_op(sow_side, sow_hole))
             board.set_seeds(move.side, sow_hole, 0)
@@ -213,6 +213,6 @@ class MancalaEnv(object):
             board.add_seeds_to_store(collecting_side, seeds)
 
         # Return the side which is next to move
-        if sow_hole == 0:
+        if sow_hole == 0 and (move.side == Side.NORTH or north_moved):
             return move.side  # Last seed was placed in the store, so side moves again
         return Side.opposite(move.side)

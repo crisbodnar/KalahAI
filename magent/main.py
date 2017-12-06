@@ -1,63 +1,50 @@
-import sys
+import logging
 
-from magent.board import Board
+from magent.move import Move
 from magent.protocol.invalid_message_exception import InvalidMessageException
 from magent.protocol.msg_type import MsgType
-from magent.protocol.protocol import Protocol
+import magent.protocol.protocol as protocol
+from magent.mcts.mcts import mcts_factory
+from magent.mancala import MancalaEnv
 
-
-class Main(object):
-    # Input from the game engine
-
-    """
-        Send a message to the game engine.
-        @:param msg the message
-    """
-
-    @staticmethod
-    def send_msg(message: str):
-        print(message)
-        sys.stdout.flush()
-
-    """
-        Receives a message from the game engine. Messages are terminated by 
-        a '\n' character.
-        
-        @:return The message.
-        @:raise IOException if there has been an I/O error.
-    """
-
-    @staticmethod
-    def recv_msg():
-        return sys.stdin.readline()
-
+logging.basicConfig(filename='application.log', level=logging.INFO)
+# logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 
 if __name__ == '__main__':
+    mcts = mcts_factory('standard-mcts')  # configure MCTS
+    state = MancalaEnv()
+
     try:
         while True:
-            print()
-            msg = Main.recv_msg()
-            print("Received: ", msg)
+            msg = protocol.read_msg()
             try:
-                msg_type = Protocol.get_msg_type(msg)
+                msg_type = protocol.get_msg_type(msg)
                 if msg_type == MsgType.START:
-                    print("A start.")
-                    first = Protocol.interpret_start_msg(msg)
+                    first = protocol.interpret_start_msg(msg)
+                    if first:
+                        move = mcts.search(state)
+                        protocol.send_msg(protocol.create_move_msg(move.index))
                 elif msg_type == MsgType.STATE:
-                    print("A state.")
-                    board = Board(7, 7)
-                    move_turn = Protocol.interpret_state_msg(msg, board)
-                    print("This was the move: ", move_turn.index)
-                    print("Is the game over? ", move_turn.end)
+                    move_turn = protocol.interpret_state_msg(msg)
+                    state.perform_move(Move(state.side_to_move, move_turn.move))
                     if not move_turn.end:
-                        print("Is it our turn again? " + str(move_turn.again))
-                    print("The board:\n", board)
+                        if move_turn.again:
+                            move = mcts.search(state)
+                            # pie rule; optimal move is to swap
+                            if move.index == 0:
+                                protocol.send_msg(protocol.create_swap_msg())
+                            else:
+                                protocol.send_msg(protocol.create_move_msg(move.index))
+
+                    logging.info("Next side: " + str(state.side_to_move))
+                    logging.info("The board:\n" + str(state.board))
                 elif msg_type == MsgType.END:
-                    print("The end, kkthxbi")
                     break
                 else:
-                    print("Not sure what I got ", msg_type)
+                    logging.warning("Not sure what I got " + str(msg_type))
             except InvalidMessageException as e:
-                print(str(e))
+                logging.error(str(e))
     except Exception as e:
-        print("This shouldn't happen: " + str(e))
+        logging.error("Uncaught exception in main: " + str(e))
+        # TODO Default to reasonable move behaviour on failure
+        # protocol.send_msg("MOVE;1")

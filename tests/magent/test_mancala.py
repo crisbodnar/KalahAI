@@ -24,7 +24,7 @@ class TestMancalaGameState(unittest.TestCase):
 
         self.assertEqual(clone.board.get_seeds(Side.SOUTH, 3), 7)
         self.assertEqual(clone.side_to_move, Side.SOUTH)
-    
+
     def test_move_has_required_effects(self):
         self.game.perform_move(Move(Side.SOUTH, 5))
         self.assertEqual(self.game.board.get_seeds(Side.SOUTH, 5), 0)
