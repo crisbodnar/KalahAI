@@ -2,16 +2,6 @@ from math import sqrt, log
 from magent.mcts.graph.node import Node
 
 
-# backpropgate pushes the reward (pay/visits) to the parents node up to the root
-def backpropagate(node: Node):
-    node_reward = node.reward
-    parent = node.parent
-    # propagate node reward to parents'
-    while parent is not None:
-        parent.update(node_reward)
-        parent = parent.parent
-
-
 # select_best_child returns the child that maximise upper confidence interval (UCT applied to trees)
 def select_best_child(node: Node) -> Node:
     if node.is_terminal():
@@ -19,13 +9,7 @@ def select_best_child(node: Node) -> Node:
     elif len(node.children) == 1:
         return node.children[0]
 
-    max_child, max_child_reward = (node.children[0], _uct_reward(node, node.children[0]))
-    for child in node.children[1:]:
-        child_reward = _uct_reward(node, child)
-        if child_reward > max_child_reward:
-            max_child = child
-            max_child_reward = child_reward
-    return max_child
+    return sorted(node.children, key=lambda child: _uct_reward(node, child))[-1]
 
 
 # select_max_child returns the child with highest average reward
@@ -55,13 +39,7 @@ def select_secure_child(node: Node) -> Node:
     elif len(node.children) == 1:
         return node.children[0]
 
-    max_child, max_lower_confidence_interval = (node.children[0], _lower_confidence_interval(node, node.children[0]))
-    for child in node.children[1:]:
-        _, child_reward = _lower_confidence_interval(node, child)
-        if child_reward > max_lower_confidence_interval:
-            max_child = child
-            max_lower_confidence_interval = child_reward
-    return max_child
+    return sorted(node.children, key=lambda child: _lower_confidence_interval(node, child))[-1]
 
 
 def _uct_reward(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:

@@ -1,7 +1,5 @@
 import sys
 import logging
-from magent.board import Board
-from magent.side import Side
 from magent.protocol.msg_type import MsgType
 from magent.protocol.move_turn import MoveTurn
 from magent.protocol.invalid_message_exception import InvalidMessageException
@@ -85,16 +83,12 @@ def interpret_start_msg(msg: str) -> bool:
         raise InvalidMessageException("Illegal position parameter: " + position)
 
 
-def interpret_state_msg(msg: str, board: Board) -> MoveTurn:
+def interpret_state_msg(msg: str) -> MoveTurn:
     """
         Interprets a "state_change" message. Should be called if
         getMessageType(msg) returns MsgType.STATE
 
         @:param msg   The message.
-        @:param board This is an output parameter. It will store the new state
-                     of the Mancala board. The board has to have the right dimensions
-                     (number of holes), otherwise an InvalidMessageException is
-                     thrown.
         @:return information about the move that led to the state change and
         who's turn it is next.
         @:raises InvalidMessageException if the message is not well-formed.
@@ -112,35 +106,13 @@ def interpret_state_msg(msg: str, board: Board) -> MoveTurn:
 
     if msg_parts[1] == "SWAP":
         logging.info("Opponent requested swap")
-        move_turn.move = -1
+        move_turn.move = 0
 
     else:
         try:
             move_turn.move = int(msg_parts[1])
         except ValueError as e:
             raise InvalidMessageException("Illegal value for move parameter: ", str(e))
-
-    # 2nd argument: the board
-    board_parts = msg_parts[2].split(',', -1)
-
-    if 2 * (board.holes + 1) != len(board_parts):
-        raise InvalidMessageException("Board dimensions in message ("
-                                      + str(len(board_parts)) + " entries) are not as expected ("
-                                      + 2 * (board.holes() + 1) + " entries).")
-    try:
-        for i in range(board.holes):
-            # holes on the north side
-            board.set_seeds(Side.NORTH, i + 1, int(board_parts[i]))
-            # holes on the south side
-            board.set_seeds(Side.SOUTH, i + 1, int(board_parts[i + int(board.holes) + 1]))
-        # northern store
-        board.set_seeds_in_store(Side.NORTH, int(board_parts[board.holes]))
-        # southern store
-        board.set_seeds_in_store(Side.SOUTH, int(board_parts[2 * board.holes + 1]))
-    except ValueError as e:
-        raise InvalidMessageException("Illegal value for seed count: " + str(e))
-    except Exception as e:
-        raise InvalidMessageException("Illegal value for seed count: " + str(e))
 
     # 3rd argument: who's turn
     move_turn.end = False
