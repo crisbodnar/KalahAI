@@ -14,17 +14,15 @@ class ActorCriticNetwork(object):
             self.valid_action_mask = tf.placeholder(tf.float32, shape=[None, a_size], name='binary_mask')
 
             flattened_imp = tf.contrib.layers.flatten(self.inputs)
-            net_h1 = tf.layers.dense(inputs=flattened_imp, units=20, activation=tf.nn.relu,
+            net_h1 = tf.layers.dense(inputs=flattened_imp, units=16, activation=tf.nn.relu,
                                      kernel_initializer=w_init, name='pg_h1')
-            net_h2 = tf.layers.dense(inputs=net_h1, units=10, activation=tf.nn.relu,
+            net_h2 = tf.layers.dense(inputs=net_h1, units=20, activation=tf.nn.relu,
                                      kernel_initializer=w_init, name='pg_h2')
-            # net_h5 = tf.layers.dense(inputs=net_h4, units=10, activation=tf.nn.relu,
-            #                          kernel_initializer=w_init, name='pg_h3')
-            # net_h6 = tf.layers.dense(inputs=net_h5, units=10, activation=tf.nn.relu,
-            #                          kernel_initializer=w_init, name='pg_h4')
+            net_h3 = tf.layers.dense(inputs=net_h2, units=10, activation=tf.nn.relu,
+                                     kernel_initializer=w_init, name='pg_h3')
 
             # Output layers for policy and value estimations
-            logits = slim.fully_connected(net_h2, a_size, activation_fn=None,
+            logits = slim.fully_connected(net_h3, a_size, activation_fn=None,
                                           weights_initializer=normalized_columns_initializer(0.01),
                                           biases_initializer=None)
             # Compute the unnormalised probabilities
@@ -35,7 +33,7 @@ class ActorCriticNetwork(object):
             self.valid_action_prob = valid_exp_logits / tf.reduce_sum(valid_exp_logits)
             self.policy = tf.nn.softmax(logits)
 
-            self.value = slim.fully_connected(net_h2, 1,
+            self.value = slim.fully_connected(net_h3, 1,
                                               activation_fn=None,
                                               weights_initializer=normalized_columns_initializer(1.0),
                                               biases_initializer=None)
@@ -62,7 +60,7 @@ class ActorCriticNetwork(object):
                 # Get gradients from local network using local losses
                 self.gradients = tf.gradients(self.loss, local_vars)
                 self.var_norms = tf.global_norm(local_vars)
-                grads, self.grad_norms = tf.clip_by_global_norm(self.gradients, 40.0)
+                grads, self.grad_norms = tf.clip_by_global_norm(self.gradients, 10.0)
 
                 # Apply local gradients to global network
                 global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
