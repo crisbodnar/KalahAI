@@ -44,7 +44,7 @@ class ActorCriticNetwork(object):
 
                 self.responsible_outputs = tf.reduce_sum(self.policy * self.actions_onehot, [1])
 
-                local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
+                self.local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
 
                 # Loss functions
                 eps = 1e-7
@@ -55,8 +55,8 @@ class ActorCriticNetwork(object):
                 self.loss = 0.5 * self.value_loss + self.policy_loss - self.entropy * 0.01  # + 0.002 * self.reg_loss
 
                 # Get gradients from local network using local losses
-                self.gradients = tf.gradients(self.loss, local_vars)
-                self.var_norms = tf.global_norm(local_vars)
+                self.gradients = tf.gradients(self.loss, self.local_vars)
+                self.var_norms = tf.global_norm(self.local_vars)
                 grads, self.grad_norms = tf.clip_by_global_norm(self.gradients, 100.0)
 
                 # Apply local gradients to global network

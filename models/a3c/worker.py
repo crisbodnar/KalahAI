@@ -21,6 +21,7 @@ class Worker(object):
         self.episode_mean_values = []
         self.summary_writer = tf.summary.FileWriter("logs/a3c/train_" + str(self.number))
         self.a_size = a_size
+        self.old_vars = []
 
         # Create the local copy of the network and the tensorflow op to copy global paramters to local network
         self.local_AC = ActorCriticNetwork(a_size, self.name, trainer)
@@ -81,6 +82,15 @@ class Worker(object):
     #     dist = exp_logits / np.sum(exp_logits)
     #     return np.random.choice(range(7), p=dist), dist, exp_logits
 
+    def dist_from_logits(self, logits):
+        logits = np.ndarray.flatten(np.asarray(logits, dtype=np.float64))
+        for idx, _ in enumerate(logits):
+            if (idx + 1) not in [move.index for move in self.env.get_legal_moves()]:
+                logits[idx] = -1e99
+        exp = np.exp(logits - np.max(logits))
+        dist = exp / np.sum(exp)
+        return dist
+
     def pg_train_policy(self):
         # If there is only one possible move, just make the move. Evaluating network on this could destabilise weights.
         if len(self.env.get_legal_moves()) == 1:
@@ -91,21 +101,22 @@ class Worker(object):
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
 
-        a_dist, v, logits = self.sess.run(
-            [self.local_AC.policy, self.local_AC.value, self.local_AC.logits],
+        v, logits = self.sess.run(
+            [self.local_AC.value, self.local_AC.logits],
             feed_dict={self.local_AC.inputs: [state],
                        self.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
                        }
         )
         # Sample an action from the distribution
-        action = np.random.choice(range(self.a_size), p=a_dist[0])
+        dist = self.dist_from_logits(logits)
+        action = np.random.choice(range(self.a_size), p=dist)
 
         # Due to numerical reasons, illegal actions might be sampled.
         # This is here for debugging reasons.
         if not self.env.is_legal(Move(self.agent_side, action + 1)):
             print(state)
             print(self.env.get_actions_mask())
-            print(a_dist)
+            print(dist)
             print(v)
             print(logits)
 
@@ -128,12 +139,13 @@ class Worker(object):
         self.total_steps += 1
         self.episode_step_count += 1
 
-    def work(self, gamma, sess, coord, saver):
+    def work(self, gamma, sess, coord, saver, opp):
         episode_count = sess.run(self.global_episodes)
         self.total_steps = 0
         self.played_games = 0
         self.won_games = 0
         self.sess = sess
+        self.opp = opp
 
         print("Starting worker " + str(self.number))
 
@@ -148,9 +160,9 @@ class Worker(object):
                 self.env.reset()
                 self.agent_side = Side.SOUTH  # if random.randint(0, 1) == 0 else Side.NORTH
                 if self.agent_side == Side.SOUTH:
-                    self.policy_rollout(self.pg_train_policy, self.random_policy)
+                    self.policy_rollout(self.pg_train_policy, self.pg_opp_policy)
                 else:
-                    self.policy_rollout(self.random_policy, self.pg_train_policy)
+                    self.policy_rollout(self.pg_opp_policy, self.pg_train_policy)
 
                 # Add the final reward to the agent's list of rewards
                 # If the agent didn't make the last move then the final reward must be added here.
@@ -192,6 +204,15 @@ class Worker(object):
                         self.played_games = 0
                         self.won_games = 0
 
+                        # Store parameters and load opponent with other parameters
+                        self.store_old_vars()
+                        self.tranfer_random_old_vars(self.sess, self.opp)
+
+                    if episode_count % 500 == 0:
+                        self.play_against_random()
+                        summary.value.add(tag='Perf/WinRateAgainstRandom',
+                                          simple_value=float(self.won_games / self.played_games))
+
                     self.summary_writer.add_summary(summary, episode_count)
                     self.summary_writer.flush()
 
@@ -215,3 +236,71 @@ class Worker(object):
     def random_policy(self):
         action = np.random.choice(self.env.get_legal_moves())
         _ = self.env.perform_move(action)
+
+    def pg_opp_policy(self):
+        opp_side = Side.opposite(self.agent_side)
+        # If there is only one possible move, just make the move. Evaluating network on this could destabilise weights.
+        if len(self.env.get_legal_moves()) == 1:
+            self.env.perform_move(self.env.get_legal_moves()[0])
+            return
+
+        # If the agent is playing as NORTH, it's input would be a flipped board
+        flip_board = self.env.side_to_move == Side.NORTH
+        state = self.env.board.get_board_image(flipped=flip_board)
+
+        logits = self.sess.run(
+            [self.opp.local_AC.logits],
+            feed_dict={self.opp.local_AC.inputs: [state],
+                       self.opp.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
+                       }
+        )
+        # Sample an action from the distribution
+        dist = self.dist_from_logits(logits)
+        action = np.random.choice(range(self.a_size), p=dist)
+
+        # # Due to numerical reasons, illegal actions might be sampled.
+        # # This is here for debugging reasons.
+        # if not self.env.is_legal(Move(Side.opposite(opp_side), action + 1)):
+        #     print('Opponent made an invalid move')
+        #     print(state)
+        #     print(self.env.get_actions_mask())
+        #     print(a_dist)
+        #     print(v)
+        #     print(logits)
+
+        try:
+            self.env.perform_move(Move(opp_side, action + 1))
+        except ValueError:
+            # Invalid move causes a lost game. This should not happen (usually)
+            for hole in range(1, self.env.board.holes):
+                self.env.board.set_seeds(opp_side, hole, 0)
+            self.env.board.set_seeds_in_store(opp_side, 0)
+
+    def store_old_vars(self):
+        self.old_vars.append(self.local_AC.local_vars)
+        self.old_vars = self.old_vars[-20:]
+
+    def tranfer_random_old_vars(self, sess: tf.Session, other_worker):
+        if len(self.old_vars) == 0:
+            return
+        vars_idx = np.random.choice(range(len(self.old_vars)))
+        vars = self.old_vars[vars_idx]
+        transfer_op = [other_var.assign(this_var.value()) for other_var, this_var
+                       in zip(other_worker.local_AC.local_vars, vars)]
+        sess.run(transfer_op)
+
+    def play_against_random(self):
+        self.played_games = 0
+        self.won_games = 0
+
+        for _ in range(100):
+            self.agent_side = Side.SOUTH  # if random.randint(0, 1) == 0 else Side.NORTH
+            if self.agent_side == Side.SOUTH:
+                self.policy_rollout(self.pg_train_policy, self.random_policy)
+            else:
+                self.policy_rollout(self.random_policy, self.pg_train_policy)
+
+            self.played_games += 1
+            if self.env.get_winner() == self.agent_side:
+                self.won_games += 1
+
