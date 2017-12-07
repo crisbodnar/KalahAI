@@ -203,14 +203,15 @@ class Worker(object):
                         self.played_games = 0
                         self.won_games = 0
 
-                        # Store parameters and load opponent with other parameters
-                        self.store_old_vars()
-                        self.tranfer_random_old_vars(self.sess, self.opp)
-
-                    if episode_count % 500 == 0:
+                    if episode_count % 250 == 0:
                         self.play_against_random()
                         summary.value.add(tag='Perf/WinRateAgainstRandom',
                                           simple_value=float(self.won_games / self.played_games))
+
+                    if episode_count % 2000 == 0:
+                        # Store parameters and load opponent with other parameters
+                        self.store_old_vars()
+                        self.tranfer_random_old_vars(self.sess, self.opp)
 
                     self.summary_writer.add_summary(summary, episode_count)
                     self.summary_writer.flush()
@@ -277,7 +278,7 @@ class Worker(object):
 
     def store_old_vars(self):
         self.old_vars.append(self.local_AC.local_vars)
-        self.old_vars = self.old_vars[-20:]
+        self.old_vars = self.old_vars[-5:]
 
     def tranfer_random_old_vars(self, sess: tf.Session, other_worker):
         if len(self.old_vars) == 0:
@@ -292,7 +293,7 @@ class Worker(object):
         self.played_games = 0
         self.won_games = 0
 
-        for _ in range(100):
+        for _ in range(50):
             self.agent_side = Side.SOUTH  # if random.randint(0, 1) == 0 else Side.NORTH
             if self.agent_side == Side.SOUTH:
                 self.policy_rollout(self.pg_train_policy, self.random_policy)

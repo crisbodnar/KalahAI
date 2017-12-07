@@ -46,7 +46,7 @@ with tf.Session() as sess:
     # This is where the asynchronous magic happens.
     # Start the "work" process for each worker in a separate threat.
     worker_threads = []
-    for idx, worker in enumerate(workers):
+    for idx, worker in enumerate(workers[:5]):
         def worker_work():
             worker.work(gamma, sess, coord, saver, opponents[idx])
         t = threading.Thread(target=worker_work)
