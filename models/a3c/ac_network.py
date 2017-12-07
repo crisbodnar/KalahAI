@@ -11,7 +11,8 @@ class ActorCriticNetwork(object):
         with tf.variable_scope(scope):
             # Input and visual encoding layers
             self.inputs = tf.placeholder(tf.float32, shape=[None, 2, 8, 1], name='board')
-            self.valid_action_mask = tf.placeholder(tf.float32, shape=[None, a_size], name='binary_mask')
+            # self.valid_action_mask = tf.placeholder(tf.float32, shape=[None, a_size], name='binary_mask')
+            # inverse_mask = tf.subtract(tf.ones_like(self.valid_action_mask) - self.valid_action_mask)
 
             flattened_imp = tf.contrib.layers.flatten(self.inputs)
             net_h1 = tf.layers.dense(inputs=flattened_imp, units=16, activation=tf.nn.relu,
@@ -26,10 +27,9 @@ class ActorCriticNetwork(object):
                                           weights_initializer=normalized_columns_initializer(0.01),
                                           biases_initializer=None)
             # Compute probabilities taking into account only the valid actions
-            softmax = tf.nn.softmax(self.logits)
-            inverse_max = tf.ones_like(self.valid_action_mask) - self.valid_action_mask
-            valid_prob = softmax * self.valid_action_mask + inverse_max * 1e-35
-            self.policy = valid_prob / tf.reduce_sum(valid_prob, axis=1, keep_dims=True)
+            self.policy = tf.nn.softmax(self.logits)
+            # valid_prob = tf.add(tf.multiply(softmax, self.valid_action_mask), tf.multiply(inverse_mask, 1e-35))
+            # self.policy = tf.divide(valid_prob, tf.reduce_sum(valid_prob, axis=1, keep_dims=True))
 
             self.value = slim.fully_connected(net_h3, 1,
                                               activation_fn=None,

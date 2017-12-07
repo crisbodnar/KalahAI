@@ -51,7 +51,7 @@ class Worker(object):
         feed_dict = {self.local_AC.target_v: discounted_rewards,
                      self.local_AC.inputs: np.vstack(observations),
                      self.local_AC.actions: actions,
-                     self.local_AC.valid_action_mask: np.vstack(masks),
+                     # self.local_AC.valid_action_mask: np.vstack(masks),
                      self.local_AC.advantages: advantages}
         v_l, p_l, e_l, g_n, v_n, _ = sess.run([self.local_AC.value_loss,
                                                self.local_AC.policy_loss,
@@ -91,6 +91,13 @@ class Worker(object):
         dist = exp / np.sum(exp)
         return dist
 
+    def to_valid_dist(self, pi, mask):
+        inverted_mask = np.ones_like(mask) - mask
+        pi = np.ndarray.flatten(np.asarray(pi, dtype=np.float64))
+        pi = pi * mask + inverted_mask * 1e-60
+        pi = pi / np.sum(pi)
+        return pi
+
     def pg_train_policy(self):
         # If there is only one possible move, just make the move. Evaluating network on this could destabilise weights.
         if len(self.env.get_legal_moves()) == 1:
@@ -100,16 +107,17 @@ class Worker(object):
         # If the agent is playing as NORTH, it's input would be a flipped board
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
+        mask = self.env.get_action_mask_with_no_pie()
 
         policy, v, logits = self.sess.run(
             [self.local_AC.policy, self.local_AC.value, self.local_AC.logits],
             feed_dict={self.local_AC.inputs: [state],
-                       self.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
+                       # self.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
                        }
         )
         # Sample an action from the distribution
         # dist = self.dist_from_logits(logits)
-        action = np.random.choice(range(self.a_size), p=policy[0])
+        action = np.random.choice(range(self.a_size), p=self.to_valid_dist(policy, mask))
 
         # Due to numerical reasons, illegal actions might be sampled.
         # This is here for debugging reasons.
@@ -247,16 +255,17 @@ class Worker(object):
         # If the agent is playing as NORTH, it's input would be a flipped board
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
+        mask = self.env.get_action_mask_with_no_pie()
 
         policy, logits = self.sess.run(
             [self.opp.local_AC.policy, self.opp.local_AC.logits],
             feed_dict={self.opp.local_AC.inputs: [state],
-                       self.opp.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
+                       # self.opp.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
                        }
         )
         # Sample an action from the distribution
         # dist = self.dist_from_logits(logits)
-        action = np.random.choice(range(self.a_size), p=policy[0])
+        action = np.random.choice(range(self.a_size), p=self.to_valid_dist(policy, mask))
 
         # # Due to numerical reasons, illegal actions might be sampled.
         # # This is here for debugging reasons.
