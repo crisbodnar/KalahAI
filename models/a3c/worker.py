@@ -101,22 +101,21 @@ class Worker(object):
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
 
-        v, logits = self.sess.run(
-            [self.local_AC.value, self.local_AC.logits],
+        policy, v, logits = self.sess.run(
+            [self.local_AC.policy, self.local_AC.value, self.local_AC.logits],
             feed_dict={self.local_AC.inputs: [state],
                        self.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
                        }
         )
         # Sample an action from the distribution
-        dist = self.dist_from_logits(logits)
-        action = np.random.choice(range(self.a_size), p=dist)
+        # dist = self.dist_from_logits(logits)
+        action = np.random.choice(range(self.a_size), p=policy[0])
 
         # Due to numerical reasons, illegal actions might be sampled.
         # This is here for debugging reasons.
         if not self.env.is_legal(Move(self.agent_side, action + 1)):
             print(state)
             print(self.env.get_actions_mask())
-            print(dist)
             print(v)
             print(logits)
 
@@ -248,15 +247,15 @@ class Worker(object):
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
 
-        logits = self.sess.run(
-            [self.opp.local_AC.logits],
+        policy, logits = self.sess.run(
+            [self.opp.local_AC.policy, self.opp.local_AC.logits],
             feed_dict={self.opp.local_AC.inputs: [state],
                        self.opp.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
                        }
         )
         # Sample an action from the distribution
-        dist = self.dist_from_logits(logits)
-        action = np.random.choice(range(self.a_size), p=dist)
+        # dist = self.dist_from_logits(logits)
+        action = np.random.choice(range(self.a_size), p=policy[0])
 
         # # Due to numerical reasons, illegal actions might be sampled.
         # # This is here for debugging reasons.

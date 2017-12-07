@@ -27,7 +27,8 @@ class ActorCriticNetwork(object):
                                           biases_initializer=None)
             # Compute probabilities taking into account only the valid actions
             softmax = tf.nn.softmax(self.logits)
-            valid_prob = softmax * self.valid_action_mask
+            inverse_max = tf.ones_like(self.valid_action_mask) - self.valid_action_mask
+            valid_prob = softmax * self.valid_action_mask + inverse_max * 1e-35
             self.policy = valid_prob / tf.reduce_sum(valid_prob, axis=1, keep_dims=True)
 
             self.value = slim.fully_connected(net_h3, 1,

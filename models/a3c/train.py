@@ -27,9 +27,11 @@ with tf.device("/cpu:0"):
     master_network = ActorCriticNetwork(a_size, 'global', None)  # Generate global network
     num_workers = multiprocessing.cpu_count()  # Set workers to number of available CPU threads
     workers = []
+    opponents = []
     # Create worker classes
     for i in range(num_workers):
         workers.append(Worker(MancalaEnv(), i, a_size, trainer, model_path, global_episodes))
+        opponents.append(Worker(MancalaEnv(), num_workers + i, a_size, trainer, model_path, global_episodes))
     saver = tf.train.Saver(max_to_keep=5)
 
 with tf.Session() as sess:
@@ -44,9 +46,9 @@ with tf.Session() as sess:
     # This is where the asynchronous magic happens.
     # Start the "work" process for each worker in a separate threat.
     worker_threads = []
-    for worker in workers:
+    for idx, worker in enumerate(workers):
         def worker_work():
-            worker.work(gamma, sess, coord, saver)
+            worker.work(gamma, sess, coord, saver, opponents[idx])
         t = threading.Thread(target=worker_work)
         t.start()
         sleep(0.5)
