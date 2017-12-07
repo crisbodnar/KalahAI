@@ -63,19 +63,11 @@ class MancalaEnv(object):
         if move.side == Side.NORTH:
             self.north_moved = True
 
-        return self.compute_reward(move.side)
+        return self.compute_final_reward(move.side)
 
-    def compute_reward(self, side: Side):
+    def compute_final_reward(self, side: Side):
         """Returns a reward for the specified side for moving to the current state."""
-        if self.is_game_over():
-            return 1000 if self.get_winner() == side else -1000
-        reward = self.board.get_seeds_in_store(Side.NORTH) - self.board.get_seeds_in_store(Side.SOUTH)
-        reward = reward if side == Side.NORTH else -reward
-
-        # Reward actions which produce consecutive moves
-        if self.side_to_move == side:
-            reward += 100
-
+        reward = self.board.get_seeds_in_store(side) - self.board.get_seeds_in_store(Side.opposite(side))
         return reward
 
     def is_game_over(self) -> bool:
@@ -83,9 +75,23 @@ class MancalaEnv(object):
 
     def get_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = [0 for _ in range(self.board.holes + 1)]
-        for action in self.get_legal_moves():
+        mask = [1e-20 for _ in range(self.board.holes + 1)]
+        moves = self.get_legal_moves()
+        for action in moves:
             mask[action.index] = 1
+        return np.array(mask)
+
+    def get_action_mask_with_no_pie(self) -> [float]:
+        """
+        Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid.
+        The pie move is not considered.
+        """
+        mask = [1e-25 for _ in range(self.board.holes)]
+        moves = self.get_legal_moves()
+        if 0 in moves:
+            moves.remove(0)
+        for action in moves:
+            mask[action.index - 1] = 1
         return np.array(mask)
 
     def get_winner(self) -> Side or None:

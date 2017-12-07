@@ -5,4 +5,6 @@ output/
 target/
 *.class
 /models/checkpoints/
-logs/
+/logs/
+/checkpoints/
+
