@@ -23,7 +23,7 @@ if not os.path.exists(model_path):
 
 with tf.device("/cpu:0"):
     global_episodes = tf.Variable(0, dtype=tf.int32, name='global_episodes', trainable=False)
-    trainer = tf.train.RMSPropOptimizer(learning_rate=0.0002, decay=0.99, epsilon=0.1)
+    trainer = tf.train.RMSPropOptimizer(learning_rate=0.0002, decay=0.99, epsilon=0.5)
     master_network = ActorCriticNetwork(a_size, 'global', None)  # Generate global network
     num_workers = multiprocessing.cpu_count()  # Set workers to number of available CPU threads
     workers = []

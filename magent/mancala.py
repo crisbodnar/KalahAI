@@ -63,9 +63,9 @@ class MancalaEnv(object):
         if move.side == Side.NORTH:
             self.north_moved = True
 
-        return self.compute_reward(move.side)
+        return self.compute_final_reward(move.side)
 
-    def compute_reward(self, side: Side):
+    def compute_final_reward(self, side: Side):
         """Returns a reward for the specified side for moving to the current state."""
         reward = self.board.get_seeds_in_store(side) - self.board.get_seeds_in_store(Side.opposite(side))
         return reward
@@ -75,7 +75,7 @@ class MancalaEnv(object):
 
     def get_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = [1e-25 for _ in range(self.board.holes + 1)]
+        mask = [1e-20 for _ in range(self.board.holes + 1)]
         moves = self.get_legal_moves()
         for action in moves:
             mask[action.index] = 1

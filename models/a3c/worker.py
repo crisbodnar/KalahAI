@@ -121,7 +121,7 @@ class Worker(object):
                 self.env.board.set_seeds(self.agent_side, hole, 0)
             self.env.board.set_seeds_in_store(self.agent_side, 0)
 
-        self.episode_buffer.append([[state], action, reward, v[0, 0], [self.env.get_actions_mask()]])
+        self.episode_buffer.append([[state], action, reward, v[0, 0], [self.env.get_action_mask_with_no_pie()]])
         self.episode_values.append(v[0, 0])
 
         self.episode_reward += reward
@@ -154,8 +154,8 @@ class Worker(object):
 
                 # Add the final reward to the agent's list of rewards
                 # If the agent didn't make the last move then the final reward must be added here.
-                self.episode_reward += self.env.compute_reward(self.agent_side)  # / self.episode_step_count
-                self.episode_buffer[-1][2] = self.env.compute_reward(self.agent_side)  # / self.episode_step_count
+                self.episode_reward += self.env.compute_final_reward(self.agent_side)  # / self.episode_step_count
+                self.episode_buffer[-1][2] = self.env.compute_final_reward(self.agent_side)  # / self.episode_step_count
 
                 self.played_games += 1
                 if self.env.get_winner() == self.agent_side:

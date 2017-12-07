@@ -72,7 +72,7 @@ class PolicyGradientTrainer(object):
 
             # Add the final reward to the agent's list of rewards
             # If the agent didn't make the last move then the final reward must be added here.
-            self.agent.rewards[-1] = self.env.compute_reward(self.agent_side) / self.turns
+            self.agent.rewards[-1] = self.env.compute_final_reward(self.agent_side) / self.turns
             self.agent.run_train_step(game_no)
 
             self.games += 1

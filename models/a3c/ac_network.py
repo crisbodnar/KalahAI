@@ -47,9 +47,9 @@ class ActorCriticNetwork(object):
                 local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
 
                 # Loss functions
-                eps = 1e-15
+                eps = 1e-7
                 self.value_loss = 0.5 * tf.reduce_sum(tf.square(self.target_v - tf.reshape(self.value, [-1])))
-                self.entropy = - tf.reduce_sum(self.policy * tf.log(self.policy + eps))
+                self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy + eps))
                 self.policy_loss = -tf.reduce_sum(tf.log(self.responsible_outputs + eps) * self.advantages)
                 # self.reg_loss = tf.add_n([tf.nn.l2_loss(v) for v in local_vars])
                 self.loss = 0.5 * self.value_loss + self.policy_loss - self.entropy * 0.01  # + 0.002 * self.reg_loss
