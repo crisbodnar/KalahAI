@@ -7,7 +7,7 @@ class PolicyGradientAgent(object):
 
     """This is an implementation of an RL agent using the REINFORCE Policy Gradient algorithm"""
     def __init__(self, sess: tf.Session, discount=0.99, board_size=(2, 8), num_actions=8, reuse=False, is_training=True,
-                 name='agent_name', checkpoint_dir='models/checkpoints/', load_model=False):
+                 name='agent_name', checkpoint_dir='checkpoints/pgrad', load_model=False):
         self.sess = sess
         self.discount = discount
         self.board_size = board_size
@@ -84,7 +84,7 @@ class PolicyGradientAgent(object):
         self.logits_sum = tf.summary.tensor_summary('logits_sum', self.logits)
         self.out_sum = tf.summary.merge([self.action_prob_sum, self.logits_sum])
 
-        self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
+        self.writer = tf.summary.FileWriter("./logs/pgrad", self.sess.graph)
 
     def policy_network(self, is_training=True, reuse=False):
         w_init = tf.random_normal_initializer(stddev=0.02)
