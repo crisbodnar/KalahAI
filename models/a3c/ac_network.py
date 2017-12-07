@@ -6,7 +6,7 @@ from models.a3c.helpers import normalized_columns_initializer
 
 
 class ActorCriticNetwork(object):
-    def __init__(self, s_size, a_size, scope, trainer):
+    def __init__(self, a_size, scope, trainer):
         w_init = tf.contrib.layers.xavier_initializer()
         with tf.variable_scope(scope):
             # Input and visual encoding layers

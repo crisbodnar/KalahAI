@@ -9,7 +9,7 @@ import random
 
 
 class Worker(object):
-    def __init__(self, game: MancalaEnv, name, s_size, a_size, trainer, model_path, global_episodes):
+    def __init__(self, game: MancalaEnv, name, a_size, trainer, model_path, global_episodes):
         self.name = "worker_" + str(name)
         self.number = name
         self.model_path = model_path
@@ -20,9 +20,10 @@ class Worker(object):
         self.episode_lengths = []
         self.episode_mean_values = []
         self.summary_writer = tf.summary.FileWriter("logs/a3c/train_" + str(self.number))
+        self.a_size = a_size
 
         # Create the local copy of the network and the tensorflow op to copy global paramters to local network
-        self.local_AC = ActorCriticNetwork(s_size, a_size, self.name, trainer)
+        self.local_AC = ActorCriticNetwork(a_size, self.name, trainer)
         self.update_local_ops = update_target_graph('global', self.name)
 
         self.env = game
@@ -64,49 +65,50 @@ class Worker(object):
         action = np.random.choice(self.env.get_legal_moves())
         _ = self.env.perform_move(action)
 
-    def sample_action(self, logits, mask) -> (int, np.array):
-        # If only one move is possible, then choose it
-        if np.sum(mask) == 1.0:
-            return np.argmax(mask), mask
-
-        logits = np.asarray(logits[0])
-        exp_logits = np.exp(logits)
-
-        # If all of the legal moves have probability 0, assign to them a uniform distribution
-        if np.sum(exp_logits * mask) < 1e-25:
-            exp_logits = mask
-        else:
-            exp_logits *= mask
-        dist = exp_logits / np.sum(exp_logits)
-        return np.random.choice(range(7), p=dist), dist, exp_logits
+    # def sample_action(self, logits, mask) -> (int, np.array):
+    #     # If only one move is possible, then choose it
+    #     if np.sum(mask) == 1.0:
+    #         return np.argmax(mask), mask
+    #
+    #     logits = np.asarray(logits[0])
+    #     exp_logits = np.exp(logits)
+    #
+    #     # If all of the legal moves have probability 0, assign to them a uniform distribution
+    #     if np.sum(exp_logits * mask) < 1e-25:
+    #         exp_logits = mask
+    #     else:
+    #         exp_logits *= mask
+    #     dist = exp_logits / np.sum(exp_logits)
+    #     return np.random.choice(range(7), p=dist), dist, exp_logits
 
     def pg_train_policy(self):
+        # If there is only one possible move, just make the move. Evaluating network on this could destabilise weights.
         if len(self.env.get_legal_moves()) == 1:
             self.env.perform_move(self.env.get_legal_moves()[0])
             return
 
+        # If the agent is playing as NORTH, it's input would be a flipped board
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
 
         a_dist, v, logits = self.sess.run(
             [self.local_AC.policy, self.local_AC.value, self.local_AC.logits],
             feed_dict={self.local_AC.inputs: [state],
-                       self.local_AC.valid_action_mask: [self.env.get_actions_mask()],
+                       self.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
                        }
         )
-        # action, valid_act_dist, exp_log = self.sample_action(logits, self.env.get_actions_mask())
-        action = np.random.choice(range(7), p=a_dist[0])
+        # Sample an action from the distribution
+        action = np.random.choice(range(self.a_size), p=a_dist[0])
 
+        # Due to numerical reasons, illegal actions might be sampled.
+        # This is here for debugging reasons.
         if not self.env.is_legal(Move(self.agent_side, action + 1)):
             print(state)
             print(self.env.get_actions_mask())
             print(a_dist)
             print(v)
             print(logits)
-            # print(valid_act_dist)
-            # print(exp_log)
 
-        # Perform action and compute reward
         reward = 0
         try:
             seeds_in_store_before = self.env.board.get_seeds_in_store(self.agent_side)
@@ -114,6 +116,7 @@ class Worker(object):
             seeds_in_store_after = self.env.board.get_seeds_in_store(self.agent_side)
             reward = (seeds_in_store_after - seeds_in_store_before) / 100.0
         except ValueError:
+            # Invalid move causes a lost game. This should not happen (usually)
             for hole in range(1, self.env.board.holes):
                 self.env.board.set_seeds(self.agent_side, hole, 0)
             self.env.board.set_seeds_in_store(self.agent_side, 0)
@@ -125,7 +128,7 @@ class Worker(object):
         self.total_steps += 1
         self.episode_step_count += 1
 
-    def work(self, max_episode_length, gamma, sess, coord, saver):
+    def work(self, gamma, sess, coord, saver):
         episode_count = sess.run(self.global_episodes)
         self.total_steps = 0
         self.played_games = 0
