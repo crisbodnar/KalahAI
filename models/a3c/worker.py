@@ -33,6 +33,7 @@ class Worker(object):
         actions = rollout[:, 1]
         rewards = rollout[:, 2]
         values = rollout[:, 3]
+        masks = rollout[:, 4]
 
         # Here we take the rewards and values from the rollout, and use them to
         # generate the advantage and discounted returns.
@@ -48,6 +49,7 @@ class Worker(object):
         feed_dict = {self.local_AC.target_v: discounted_rewards,
                      self.local_AC.inputs: np.vstack(observations),
                      self.local_AC.actions: actions,
+                     self.local_AC.valid_action_mask: np.vstack(masks),
                      self.local_AC.advantages: advantages}
         v_l, p_l, e_l, g_n, v_n, _ = sess.run([self.local_AC.value_loss,
                                                self.local_AC.policy_loss,
@@ -62,26 +64,61 @@ class Worker(object):
         action = np.random.choice(self.env.get_legal_moves())
         _ = self.env.perform_move(action)
 
+    def sample_action(self, logits, mask) -> (int, np.array):
+        # If only one move is possible, then choose it
+        if np.sum(mask) == 1.0:
+            return np.argmax(mask), mask
+
+        logits = np.asarray(logits[0])
+        exp_logits = np.exp(logits)
+
+        # If all of the legal moves have probability 0, assign to them a uniform distribution
+        if np.sum(exp_logits * mask) < 1e-25:
+            exp_logits = mask
+        else:
+            exp_logits *= mask
+        dist = exp_logits / np.sum(exp_logits)
+        return np.random.choice(range(7), p=dist), dist, exp_logits
+
     def pg_train_policy(self):
+        if len(self.env.get_legal_moves()) == 1:
+            self.env.perform_move(self.env.get_legal_moves()[0])
+            return
+
         flip_board = self.env.side_to_move == Side.NORTH
         state = self.env.board.get_board_image(flipped=flip_board)
 
-        a_dist, v, valid_a_dist = self.sess.run(
-            [self.local_AC.policy, self.local_AC.value, self.local_AC.valid_action_prob],
+        a_dist, v, logits = self.sess.run(
+            [self.local_AC.policy, self.local_AC.value, self.local_AC.logits],
             feed_dict={self.local_AC.inputs: [state],
                        self.local_AC.valid_action_mask: [self.env.get_actions_mask()],
                        }
         )
-        action = np.random.choice(range(8), p=valid_a_dist[0])
+        # action, valid_act_dist, exp_log = self.sample_action(logits, self.env.get_actions_mask())
+        action = np.random.choice(range(7), p=a_dist[0])
+
+        if not self.env.is_legal(Move(self.agent_side, action + 1)):
+            print(state)
+            print(self.env.get_actions_mask())
+            print(a_dist)
+            print(v)
+            print(logits)
+            # print(valid_act_dist)
+            # print(exp_log)
 
         # Perform action and compute reward
-        seeds_in_store_before = self.env.board.get_seeds_in_store(self.agent_side)
-        self.env.perform_move(Move(self.agent_side, action))
-        seeds_in_store_after = self.env.board.get_seeds_in_store(self.agent_side)
+        reward = 0
+        try:
+            seeds_in_store_before = self.env.board.get_seeds_in_store(self.agent_side)
+            self.env.perform_move(Move(self.agent_side, action + 1))
+            seeds_in_store_after = self.env.board.get_seeds_in_store(self.agent_side)
+            reward = (seeds_in_store_after - seeds_in_store_before) / 100.0
+        except ValueError:
+            for hole in range(1, self.env.board.holes):
+                self.env.board.set_seeds(self.agent_side, hole, 0)
+            self.env.board.set_seeds_in_store(self.agent_side, 0)
 
-        reward = (seeds_in_store_after - seeds_in_store_before) / 100.0
-
-        self.episode_buffer.append([[state], action, reward, v[0, 0]])
+        self.episode_buffer.append([[state], action, reward, v[0, 0], [self.env.get_actions_mask()]])
         self.episode_values.append(v[0, 0])
 
         self.episode_reward += reward
@@ -106,7 +143,7 @@ class Worker(object):
                 self.episode_step_count = 0
 
                 self.env.reset()
-                self.agent_side = Side.SOUTH if random.randint(0, 1) == 0 else Side.NORTH
+                self.agent_side = Side.SOUTH  # if random.randint(0, 1) == 0 else Side.NORTH
                 if self.agent_side == Side.SOUTH:
                     self.policy_rollout(self.pg_train_policy, self.random_policy)
                 else:
@@ -114,8 +151,8 @@ class Worker(object):
 
                 # Add the final reward to the agent's list of rewards
                 # If the agent didn't make the last move then the final reward must be added here.
-                self.episode_reward += self.env.compute_reward(self.agent_side)
-                self.episode_buffer[-1][2] = self.env.compute_reward(self.agent_side)
+                self.episode_reward += self.env.compute_reward(self.agent_side)  # / self.episode_step_count
+                self.episode_buffer[-1][2] = self.env.compute_reward(self.agent_side)  # / self.episode_step_count
 
                 self.played_games += 1
                 if self.env.get_winner() == self.agent_side:

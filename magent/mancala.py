@@ -75,9 +75,12 @@ class MancalaEnv(object):
 
     def get_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = [0 for _ in range(self.board.holes + 1)]
-        for action in self.get_legal_moves():
-            mask[action.index] = 1
+        mask = [1e-25 for _ in range(self.board.holes)]
+        moves = self.get_legal_moves()
+        if 0 in moves:
+            moves.remove(0)
+        for action in moves:
+            mask[action.index - 1] = 1
         return np.array(mask)
 
     def get_winner(self) -> Side or None:

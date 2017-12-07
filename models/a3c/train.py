@@ -13,7 +13,7 @@ import os
 max_episode_length = 300
 gamma = .99  # discount rate for advantage estimation and reward discounting
 s_size = 7056  # Observations are greyscale frames of 84 * 84 * 1
-a_size = 8  # Agent can move Left, Right, or Fire
+a_size = 7
 load_model = False
 model_path = './checkpoints/a3c'
 
@@ -28,7 +28,7 @@ if not os.path.exists('./frames'):
 
 with tf.device("/cpu:0"):
     global_episodes = tf.Variable(0, dtype=tf.int32, name='global_episodes', trainable=False)
-    trainer = tf.train.RMSPropOptimizer(learning_rate=0.001, decay=0.99)
+    trainer = tf.train.RMSPropOptimizer(learning_rate=0.0002, decay=0.99, epsilon=0.1)
     master_network = ActorCriticNetwork(s_size, a_size, 'global', None)  # Generate global network
     num_workers = multiprocessing.cpu_count()  # Set workers to number of available CPU threads
     workers = []
