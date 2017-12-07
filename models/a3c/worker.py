@@ -216,7 +216,7 @@ class Worker(object):
                         summary.value.add(tag='Perf/WinRateAgainstRandom',
                                           simple_value=float(self.won_games / self.played_games))
 
-                    if episode_count % 2000 == 0:
+                    if episode_count % 3000 == 0:
                         # Store parameters and load opponent with other parameters
                         self.store_old_vars()
                         self.tranfer_random_old_vars(self.sess, self.opp)
