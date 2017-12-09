@@ -2,36 +2,69 @@ import numpy as np
 import tensorflow as tf
 import scipy.signal
 
+from collections import namedtuple
 
-#  Copies one set of variables to another.
-# Used to set worker network parameters to those of global network.
-def update_target_graph(from_scope,to_scope):
-    from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, from_scope)
-    to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, to_scope)
-
-    op_holder = []
-    for from_var,to_var in zip(from_vars,to_vars):
-        op_holder.append(to_var.assign(from_var))
-    return op_holder
+# A batch which contains all the states, actions, advantages and discounted rewards of a rollout
+Batch = namedtuple("Batch", ["states", "actions", "advantages", "discounted_rewards", "masks"])
 
 
-# Processes Doom screen image to produce cropped and resized image.
-def process_frame(frame):
-    s = frame[10:-10,30:-30]
-    s = scipy.misc.imresize(s,[84,84])
-    s = np.reshape(s,[np.prod(s.shape)]) / 255.0
-    return s
+def generate_training_batch(rollout, gamma: float, bootstrap_value=0.0):
+    """Computes the advantages and prepares the batch for training
+
+       The bootstrap value is used only for incomplete episodes which is not the case in our case where we always
+       play a full Mancala Game. We can think of the environment's MDP final state as a loop state
+       which always produces a reward of 0. This justifies the default value of 0 which we always use.
+    """
+    states = np.asarray(rollout.states)
+    actions = np.asarray(rollout.actions)
+    rewards = np.asarray(rollout.rewards)
+    values = np.asarray(rollout.values)
+    masks = np.asarray(rollout.masks)
+
+    # The advantage function is "Generalized Advantage Estimation"
+    # For more details: https://arxiv.org/abs/1506.02438
+    rewards_plus = np.concatenate((rewards.tolist(), [bootstrap_value]))
+    discounted_rewards = discount(rewards_plus[:-1], gamma)
+    value_plus = np.concatenate((values.tolist(), [bootstrap_value]))
+    advantages = rewards + gamma * value_plus[1:] - value_plus[:-1]
+    advantages = discount(advantages, gamma)
+
+    return Batch(states, actions, advantages, discounted_rewards, masks)
 
 
-# Discounting function used to calculate discounted returns.
 def discount(x, gamma):
+    """Calculates discounted rewards"""
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
 # Used to initialize weights for policy and value output layers
 def normalized_columns_initializer(std=1.0):
-    def _initializer(shape, dtype=None, partition_info=None):
+    def _initializer(shape, _dtype=None, _partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
         out *= std / np.sqrt(np.square(out).sum(axis=0, keepdims=True))
         return tf.constant(out)
     return _initializer
+
+
+class Rollout(object):
+    def __init__(self):
+        self.states = []
+        self.actions = []
+        self.rewards = []
+        self.values = []
+        self.masks = []
+        self.win = 0
+
+    def add(self, state: np.array, action: int, reward: int, value: int, mask: [float]):
+        self.states.append(state)
+        self.actions.append(action)
+        self.rewards.append(reward)
+        self.values.append(value)
+        self.masks.append(mask)
+
+    def update_last_reward(self, reward):
+        assert len(self.rewards) > 0
+        self.rewards[-1] = reward
+
+    def add_win(self):
+        self.win = 1

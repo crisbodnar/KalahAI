@@ -59,11 +59,14 @@ class MancalaEnv(object):
 
     def perform_move(self, move: Move) -> int:
         """Performs a move and returns the reward for this move."""
+        seeds_in_store_before = self.board.get_seeds_in_store(move.side)
         self.side_to_move = MancalaEnv.make_move(self.board, move, self.north_moved)
         if move.side == Side.NORTH:
             self.north_moved = True
+        seeds_in_store_after = self.board.get_seeds_in_store(move.side)
 
-        return self.compute_final_reward(move.side)
+        # Return a partial reward proportional to the number of captured seeds.
+        return (seeds_in_store_after - seeds_in_store_before) / 100.0
 
     def compute_final_reward(self, side: Side):
         """Returns a reward for the specified side for moving to the current state."""
@@ -75,7 +78,7 @@ class MancalaEnv(object):
 
     def get_actions_mask(self) -> [float]:
         """Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid. """
-        mask = [1e-20 for _ in range(self.board.holes + 1)]
+        mask = [0 for _ in range(self.board.holes + 1)]
         moves = self.get_legal_moves()
         for action in moves:
             mask[action.index] = 1
@@ -86,12 +89,12 @@ class MancalaEnv(object):
         Returns an np array of 1s and 0s where 1 at index i means that the action with that action is valid.
         The pie move is not considered.
         """
-        mask = [1e-25 for _ in range(self.board.holes)]
-        moves = self.get_legal_moves()
+        mask = [0 for _ in range(self.board.holes)]
+        moves = [move.index for move in self.get_legal_moves()]
         if 0 in moves:
             moves.remove(0)
         for action in moves:
-            mask[action.index - 1] = 1
+            mask[action - 1] = 1
         return np.array(mask)
 
     def get_winner(self) -> Side or None:

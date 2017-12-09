@@ -1,217 +1,142 @@
-import numpy as np
+#!/usr/bin/env python
 import tensorflow as tf
-from models.a3c.ac_network import ActorCriticNetwork
-from models.a3c.helpers import update_target_graph, discount, process_frame
+import argparse
+import logging
+import sys
+import signal
+import time
+import os
+from models.a3c.a3c import A3C
 from magent.mancala import MancalaEnv
-from magent.side import Side
-from magent.move import Move
-import random
+from models.a3c.agent import RandomAgent
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
-class Worker(object):
-    def __init__(self, game: MancalaEnv, name, a_size, trainer, model_path, global_episodes):
-        self.name = "worker_" + str(name)
-        self.number = name
-        self.model_path = model_path
-        self.trainer = trainer
-        self.global_episodes = global_episodes
-        self.increment = self.global_episodes.assign_add(1)
-        self.episode_rewards = []
-        self.episode_lengths = []
-        self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter("logs/a3c/train_" + str(self.number))
-        self.a_size = a_size
+class FastSaver(tf.train.Saver):
+    """Disables the write meta graph argument to speed up the saver"""
+    def save(self, sess, save_path, global_step=None, latest_filename=None,
+             meta_graph_suffix="meta", write_meta_graph=True, write_state=True):
+        super(FastSaver, self).save(sess, save_path, global_step, latest_filename,
+                                    meta_graph_suffix, False)
 
-        # Create the local copy of the network and the tensorflow op to copy global paramters to local network
-        self.local_AC = ActorCriticNetwork(a_size, self.name, trainer)
-        self.update_local_ops = update_target_graph('global', self.name)
 
-        self.env = game
+def run(args, server):
+    env = MancalaEnv()
+    trainer = A3C(env, args.task)
 
-    def train(self, rollout, sess, gamma, bootstrap_value):
-        rollout = np.array(rollout)
-        observations = rollout[:, 0]
-        actions = rollout[:, 1]
-        rewards = rollout[:, 2]
-        values = rollout[:, 3]
-        masks = rollout[:, 4]
+    # Variable names that start with "local" are not saved in checkpoints.
+    variables_to_save = [v for v in tf.global_variables() if not v.name.startswith("local")]
+    init_op = tf.variables_initializer(variables_to_save)
+    init_all_op = tf.global_variables_initializer()
+    saver = FastSaver(variables_to_save)
 
-        # Here we take the rewards and values from the rollout, and use them to
-        # generate the advantage and discounted returns.
-        # The advantage function uses "Generalized Advantage Estimation"
-        self.rewards_plus = np.asarray(rewards.tolist() + [bootstrap_value])
-        discounted_rewards = discount(self.rewards_plus[:-1], gamma)
-        self.value_plus = np.asarray(values.tolist() + [bootstrap_value])
-        advantages = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
-        advantages = discount(advantages, gamma)
+    var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
+    logger.info('Trainable vars:')
+    for v in var_list:
+        logger.info('  %s %s', v.name, v.get_shape())
 
-        # Update the global network using gradients from loss
-        # Generate network statistics to periodically save
-        feed_dict = {self.local_AC.target_v: discounted_rewards,
-                     self.local_AC.inputs: np.vstack(observations),
-                     self.local_AC.actions: actions,
-                     self.local_AC.valid_action_mask: np.vstack(masks),
-                     self.local_AC.advantages: advantages}
-        v_l, p_l, e_l, g_n, v_n, _ = sess.run([self.local_AC.value_loss,
-                                               self.local_AC.policy_loss,
-                                               self.local_AC.entropy,
-                                               self.local_AC.grad_norms,
-                                               self.local_AC.var_norms,
-                                               self.local_AC.apply_grads],
-                                              feed_dict=feed_dict)
-        return v_l / len(rollout), p_l / len(rollout), e_l / len(rollout), g_n, v_n
+    def init_fn(ses):
+        logger.info("Initializing all parameters.")
+        ses.run(init_all_op)
 
-    def random_policy(self):
-        action = np.random.choice(self.env.get_legal_moves())
-        _ = self.env.perform_move(action)
+    config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:{}/cpu:0".format(args.task)])
+    logdir = os.path.join(args.log_dir, 'train')
 
-    # def sample_action(self, logits, mask) -> (int, np.array):
-    #     # If only one move is possible, then choose it
-    #     if np.sum(mask) == 1.0:
-    #         return np.argmax(mask), mask
-    #
-    #     logits = np.asarray(logits[0])
-    #     exp_logits = np.exp(logits)
-    #
-    #     # If all of the legal moves have probability 0, assign to them a uniform distribution
-    #     if np.sum(exp_logits * mask) < 1e-25:
-    #         exp_logits = mask
-    #     else:
-    #         exp_logits *= mask
-    #     dist = exp_logits / np.sum(exp_logits)
-    #     return np.random.choice(range(7), p=dist), dist, exp_logits
+    summary_writer = tf.summary.FileWriter(logdir + "_%d" % args.task)
 
-    def pg_train_policy(self):
-        # If there is only one possible move, just make the move. Evaluating network on this could destabilise weights.
-        if len(self.env.get_legal_moves()) == 1:
-            self.env.perform_move(self.env.get_legal_moves()[0])
-            return
+    logger.info("Events directory: %s_%s", logdir, args.task)
+    sv = tf.train.Supervisor(is_chief=(args.task == 0),
+                             logdir=logdir,
+                             saver=saver,
+                             summary_op=None,
+                             init_op=init_op,
+                             init_fn=init_fn,
+                             summary_writer=summary_writer,
+                             ready_op=tf.report_uninitialized_variables(variables_to_save),
+                             global_step=trainer.global_step,
+                             save_model_secs=30,
+                             save_summaries_secs=30)
+    num_global_steps = 100000000
 
-        # If the agent is playing as NORTH, it's input would be a flipped board
-        flip_board = self.env.side_to_move == Side.NORTH
-        state = self.env.board.get_board_image(flipped=flip_board)
+    logger.info(
+        "Starting session. If this hangs, we're mostly likely waiting to connect to the parameter server. " +
+        "One common cause is that the parameter server DNS name isn't resolving yet, or is misspecified.")
+    with sv.managed_session(server.target, config=config) as sess, sess.as_default():
+        sess.run(trainer.down_sync)
+        global_step = sess.run(trainer.global_step)
+        logger.info("Starting training at step=%d", global_step)
 
-        a_dist, v, logits = self.sess.run(
-            [self.local_AC.policy, self.local_AC.value, self.local_AC.logits],
-            feed_dict={self.local_AC.inputs: [state],
-                       self.local_AC.valid_action_mask: [self.env.get_action_mask_with_no_pie()],
-                       }
-        )
-        # Sample an action from the distribution
-        action = np.random.choice(range(self.a_size), p=a_dist[0])
+        while not sv.should_stop() and (not num_global_steps or global_step < num_global_steps):
+            trainer.play(sess, RandomAgent(), summary_writer)
+            global_step = sess.run(trainer.global_step)
 
-        # Due to numerical reasons, illegal actions might be sampled.
-        # This is here for debugging reasons.
-        if not self.env.is_legal(Move(self.agent_side, action + 1)):
-            print(state)
-            print(self.env.get_actions_mask())
-            print(a_dist)
-            print(v)
-            print(logits)
+    # Ask for all the services to stop.
+    sv.stop()
+    logger.info('reached %s steps. worker stopped.', global_step)
 
-        reward = 0
-        try:
-            seeds_in_store_before = self.env.board.get_seeds_in_store(self.agent_side)
-            self.env.perform_move(Move(self.agent_side, action + 1))
-            seeds_in_store_after = self.env.board.get_seeds_in_store(self.agent_side)
-            reward = (seeds_in_store_after - seeds_in_store_before) / 100.0
-        except ValueError:
-            # Invalid move causes a lost game. This should not happen (usually)
-            for hole in range(1, self.env.board.holes):
-                self.env.board.set_seeds(self.agent_side, hole, 0)
-            self.env.board.set_seeds_in_store(self.agent_side, 0)
 
-        self.episode_buffer.append([[state], action, reward, v[0, 0], [self.env.get_action_mask_with_no_pie()]])
-        self.episode_values.append(v[0, 0])
+def cluster_spec(num_workers, num_ps):
+    """
+    Setup cluster spec for the Tensorflow cluster
+    """
+    cluster = {}
+    port = 12222
 
-        self.episode_reward += reward
-        self.total_steps += 1
-        self.episode_step_count += 1
+    all_ps = []
+    host = '127.0.0.1'
+    for _ in range(num_ps):
+        all_ps.append('{}:{}'.format(host, port))
+        port += 1
+    cluster['ps'] = all_ps
 
-    def work(self, gamma, sess, coord, saver):
-        episode_count = sess.run(self.global_episodes)
-        self.total_steps = 0
-        self.played_games = 0
-        self.won_games = 0
-        self.sess = sess
+    all_workers = []
+    for _ in range(num_workers):
+        all_workers.append('{}:{}'.format(host, port))
+        port += 1
+    cluster['worker'] = all_workers
+    return cluster
 
-        print("Starting worker " + str(self.number))
 
-        with sess.as_default(), sess.graph.as_default():
-            while not coord.should_stop():
-                sess.run(self.update_local_ops)
-                self.episode_buffer = []
-                self.episode_values = []
-                self.episode_reward = 0
-                self.episode_step_count = 0
+def main(_):
+    """
+    Setting up Tensorflow for data parallel work
+    """
 
-                self.env.reset()
-                self.agent_side = Side.SOUTH  # if random.randint(0, 1) == 0 else Side.NORTH
-                if self.agent_side == Side.SOUTH:
-                    self.policy_rollout(self.pg_train_policy, self.random_policy)
-                else:
-                    self.policy_rollout(self.random_policy, self.pg_train_policy)
+    parser = argparse.ArgumentParser(description=None)
+    parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help='Set verbosity.')
+    parser.add_argument('--task', default=0, type=int, help='Task index')
+    parser.add_argument('--job-name', default="worker", help='worker or ps')
+    parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
+    parser.add_argument('--log-dir', default="/tmp/mancala", help='Log directory path')
+    parser.add_argument('-r', '--remotes', default=None,
+                        help='References to environments to create (e.g. -r 20), '
+                             'or the address of pre-existing VNC servers and '
+                             'rewarders to use (e.g. -r vnc://localhost:5900+15900,vnc://localhost:5901+15901)')
 
-                # Add the final reward to the agent's list of rewards
-                # If the agent didn't make the last move then the final reward must be added here.
-                self.episode_reward += self.env.compute_final_reward(self.agent_side)  # / self.episode_step_count
-                self.episode_buffer[-1][2] = self.env.compute_final_reward(self.agent_side)  # / self.episode_step_count
+    args = parser.parse_args()
+    spec = cluster_spec(args.num_workers, 1)
+    cluster = tf.train.ClusterSpec(spec).as_cluster_def()
 
-                self.played_games += 1
-                if self.env.get_winner() == self.agent_side:
-                    self.won_games += 1
+    # Handle actions for different signals
+    def shutdown(sig, _frame):
+        logger.warning('Received signal %s: exiting', sig)
+        sys.exit(128+sig)
+    signal.signal(signal.SIGHUP, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
 
-                self.episode_rewards.append(self.episode_reward)
-                self.episode_lengths.append(self.episode_step_count)
-                self.episode_mean_values.append(np.mean(self.episode_values))
+    if args.job_name == "worker":
+        server = tf.train.Server(cluster, job_name="worker", task_index=args.task,
+                                 config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=2))
+        run(args, server)
+    else:
+        _ = tf.train.Server(cluster, job_name="ps", task_index=args.task,
+                            config=tf.ConfigProto(device_filters=["/job:ps"]))
+        while True:
+            time.sleep(1000)
 
-                # Update the network using the episode buffer at the end of the episode.
-                v_l, p_l, e_l, g_n, v_n = self.train(self.episode_buffer, sess, gamma, 0.0)
 
-                # Periodically save gifs of episodes, model parameters, and summary statistics.
-                if episode_count % 10 == 0 and episode_count != 0:
-                    if episode_count % 250 == 0 and self.name == 'worker_0':
-                        saver.save(sess, self.model_path + '/model-' + str(episode_count) + '.cptk')
-                        print("Saved Model")
-
-                    mean_reward = np.mean(self.episode_rewards[-10:])
-                    mean_length = np.mean(self.episode_lengths[-10:])
-                    mean_value = np.mean(self.episode_mean_values[-10:])
-                    summary = tf.Summary()
-                    summary.value.add(tag='Perf/Reward', simple_value=float(mean_reward))
-                    summary.value.add(tag='Perf/Length', simple_value=float(mean_length))
-                    summary.value.add(tag='Perf/Value', simple_value=float(mean_value))
-                    summary.value.add(tag='Losses/Value Loss', simple_value=float(v_l))
-                    summary.value.add(tag='Losses/Policy Loss', simple_value=float(p_l))
-                    summary.value.add(tag='Losses/Entropy', simple_value=float(e_l))
-                    summary.value.add(tag='Losses/Grad Norm', simple_value=float(g_n))
-                    summary.value.add(tag='Losses/Var Norm', simple_value=float(v_n))
-
-                    if episode_count % 250 == 0:
-                        summary.value.add(tag='Perf/WinRate', simple_value=float(self.won_games / self.played_games))
-                        self.played_games = 0
-                        self.won_games = 0
-
-                    self.summary_writer.add_summary(summary, episode_count)
-                    self.summary_writer.flush()
-
-                if self.name == 'worker_0':
-                    sess.run(self.increment)
-                episode_count += 1
-
-    def policy_rollout(self, south_policy, north_policy):
-        # Reset the environment to make sure everything starts in a clean state.
-        self.env.reset()
-        self.turns = 0
-        while not self.env.is_game_over():
-            self.turns += 1
-            if self.env.side_to_move == Side.SOUTH:
-                south_policy()
-            else:
-                north_policy()
-
-            self.turns += 1
-
-    def random_policy(self):
-        action = np.random.choice(self.env.get_legal_moves())
-        _ = self.env.perform_move(action)
+if __name__ == "__main__":
+    tf.app.run()
