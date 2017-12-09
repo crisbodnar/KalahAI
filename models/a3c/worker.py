@@ -6,20 +6,13 @@ import sys
 import signal
 import time
 import os
-from models.a3c.a3c import A3C
 from magent.mancala import MancalaEnv
+from models.a3c.a3c import A3C
 from models.a3c.agent import RandomAgent
+from models.a3c.helpers import FastSaver
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-class FastSaver(tf.train.Saver):
-    """Disables the write meta graph argument to speed up the saver"""
-    def save(self, sess, save_path, global_step=None, latest_filename=None,
-             meta_graph_suffix="meta", write_meta_graph=True, write_state=True):
-        super(FastSaver, self).save(sess, save_path, global_step, latest_filename,
-                                    meta_graph_suffix, False)
 
 
 def run(args, server):
@@ -122,7 +115,8 @@ def main(_):
     # Handle actions for different signals
     def shutdown(sig, _frame):
         logger.warning('Received signal %s: exiting', sig)
-        sys.exit(128+sig)
+        sys.exit(128 + sig)
+
     signal.signal(signal.SIGHUP, shutdown)
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)

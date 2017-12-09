@@ -8,6 +8,15 @@ from collections import namedtuple
 Batch = namedtuple("Batch", ["states", "actions", "advantages", "discounted_rewards", "masks"])
 
 
+class FastSaver(tf.train.Saver):
+    """Disables the write meta graph argument to speed up the saver"""
+
+    def save(self, sess, save_path, global_step=None, latest_filename=None,
+             meta_graph_suffix="meta", write_meta_graph=False, write_state=True):
+        super(FastSaver, self).save(sess, save_path, global_step, latest_filename,
+                                    meta_graph_suffix, write_meta_graph, write_state)
+
+
 def generate_training_batch(rollout, gamma: float, bootstrap_value=0.0):
     """Computes the advantages and prepares the batch for training
 
@@ -43,6 +52,7 @@ def normalized_columns_initializer(std=1.0):
         out = np.random.randn(*shape).astype(np.float32)
         out *= std / np.sqrt(np.square(out).sum(axis=0, keepdims=True))
         return tf.constant(out)
+
     return _initializer
 
 

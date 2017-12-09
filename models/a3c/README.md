@@ -16,5 +16,8 @@ After running this command, a tmux session with multiple windows will open where
 workers. To access the session type `tmux a` in the terminal. Then press `ctrl+b` followed by `w`. Then you will be able
 to see all the open windows in this session.
 
+On your browser visited: http://localhost:12345/ to see the Tensorboard and status of training
 
-
+## Requirements
+* install htop to monitor processes
+* tmux version >= 1.7

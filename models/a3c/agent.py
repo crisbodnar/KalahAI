@@ -4,7 +4,7 @@ from magent.side import Side
 
 class Agent(object):
     def produce_action(self, state: np.array, action_mask: np.array, side_to_move: Side) -> int:
-        return 0
+        raise NotImplementedError("produce_action method is not implemented")
 
 
 class RandomAgent(Agent):
