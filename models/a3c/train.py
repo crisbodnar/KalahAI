@@ -31,7 +31,7 @@ def new_cmd(session, name, cmd, mode, logdir, shell):
                                                                                             logdir)
 
 
-def create_commands(session, num_workers, remotes, logdir, shell='bash', mode='tmux'):
+def create_commands(session, num_workers, remotes, logdir, shell='zsh', mode='tmux'):
     # for launching the TF workers and for launching tensorboard
     base_cmd = [
         'CUDA_VISIBLE_DEVICES=',
@@ -78,12 +78,12 @@ def create_commands(session, num_workers, remotes, logdir, shell='bash', mode='t
             # kill any process using tensorboard's port
             "kill $( lsof -i:12345 -t ) > /dev/null 2>&1",
             # kill any processes using ps / worker ports
-            "kill $( lsof -i:12222-{} -t ) > /dev/null 2>&1".format(num_workers+12222),
+            "kill $( lsof -i:12222-{} -t ) > /dev/null 2>&1".format(num_workers + 12222),
             "tmux kill-session -t {}".format(session),
-            "tmux new-session -s {} -n {} -d {}".format(session, windows[0], shell)
+            "tmux new-session -c `PWD` -s {} -n {} -d {}".format(session, windows[0], shell)
         ]
         for w in windows[1:]:
-            cmds += ["tmux new-window -t {} -n {} {}".format(session, w, shell)]
+            cmds += ["tmux new-window -t {sess} -n {window_id} {shell}".format(sess=session, window_id=w, shell=shell)]
         cmds += ["sleep 1"]
     for window, cmd in cmds_map:
         cmds += [cmd]
