@@ -47,7 +47,7 @@ class Node(object):
         # propagate node reward to parents'
         while parent is not None:
             on_same_side = Side.get_index(parent.state.side_to_move) == Side.get_index(our_side)
-            effective_reward = reward if on_same_side else -1 * reward
+            effective_reward = -1 * reward if on_same_side else reward
             parent.update(effective_reward)
             parent = parent.parent
 
