@@ -4,6 +4,7 @@ from numpy.ma import sqrt
 
 from magent.mancala import MancalaEnv
 from magent.move import Move
+from magent.side import Side
 
 
 class Node(object):
@@ -36,15 +37,18 @@ class Node(object):
         """is_terminal returns true if the node is leaf node"""
         return len(self.state.get_legal_moves()) == 0
 
-    def backpropagate(self, reward: float):
+    def backpropagate(self, reward: float, our_side: Side):
         """
         backpropgate pushes the reward (pay/visits) to the parents node up to the root
         :param reward: reward to push to parents
+        :param our_side: Our side in the game
         """
         parent = self.parent
         # propagate node reward to parents'
         while parent is not None:
-            parent.update(reward)
+            on_same_side = Side.get_index(parent.state.side_to_move) == Side.get_index(our_side)
+            effective_reward = reward if on_same_side else -1 * reward
+            parent.update(effective_reward)
             parent = parent.parent
 
     def __str__(self):
@@ -69,7 +73,7 @@ class AlphaNode(Node):
         if self.parent is not None:
             self.exploration_bonus = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 
-    def backpropagate(self, reward: float):
+    def backpropagate(self, reward: float, our_side: Side):
         """backpropgate pushes the reward (pay/visits) to the parents node up to the root"""
         parent = self.parent
         parents_path_stack = []
@@ -80,7 +84,9 @@ class AlphaNode(Node):
         # Update from root downward so the exploration bonus calculation is correct
         while len(parents_path_stack) > 0:
             node = parents_path_stack.pop()
-            node.update(reward)
+            on_same_side = Side.get_index(parent.state.side_to_move) == Side.get_index(our_side)
+            effective_reward = reward if on_same_side else -1 * reward
+            node.update(effective_reward)
 
     def calculate_action_value(self) -> float:
         return self.reward + self.exploration_bonus

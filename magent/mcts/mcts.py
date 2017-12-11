@@ -19,10 +19,11 @@ class MCTS(object):
         game_state_root = Node(state=MancalaEnv.clone(state))
         start_time = datetime.datetime.utcnow()
         games_played = 0
+        our_side = state.side_to_move
         while datetime.datetime.utcnow() - start_time < self.calculation_time:
             node = self.tree_policy.select(game_state_root)
             reward = self.default_policy.simulate(node)
-            node.backpropagate(reward)
+            node.backpropagate(reward, our_side)
             # Debugging information
             games_played += 1
             logging.debug("%s; Game played %i" % (node, games_played))
