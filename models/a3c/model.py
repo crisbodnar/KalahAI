@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+from models.a3c.helpers import normalized_columns_initializer
 
 
 class ACNetwork(object):
@@ -12,17 +13,19 @@ class ACNetwork(object):
         inverse_mask = tf.ones_like(self.mask) - self.mask
 
         flattened_imp = tf.contrib.layers.flatten(self.state)
-        net_h1 = tf.layers.dense(inputs=flattened_imp, units=16, activation=tf.nn.relu, kernel_initializer=w_init)
+        net_h1 = tf.layers.dense(inputs=flattened_imp, units=20, activation=tf.nn.relu, kernel_initializer=w_init)
         net_h2 = tf.layers.dense(inputs=net_h1, units=20, activation=tf.nn.relu, kernel_initializer=w_init)
         net_h3 = tf.layers.dense(inputs=net_h2, units=10, activation=tf.nn.relu, kernel_initializer=w_init)
 
         # Policy network
-        self.logits = tf.layers.dense(net_h3, num_act, activation=None, kernel_initializer=w_init)
+        self.logits = tf.layers.dense(net_h3, num_act, activation=None,
+                                      kernel_initializer=normalized_columns_initializer(std=0.01))
         # Zero the probabilities of invalid actions
         self.logits = self.logits * self.mask - inverse_mask * 1e35
 
         # Value network
-        self.value = tf.layers.dense(net_h3, 1, activation=None, kernel_initializer=w_init)
+        self.value = tf.layers.dense(net_h3, 1, activation=None,
+                                     kernel_initializer=normalized_columns_initializer(1.0))
 
         # The variables of this network
         self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
