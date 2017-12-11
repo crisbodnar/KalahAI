@@ -64,9 +64,9 @@ class AlphaGoTreePolicy(TreePolicy):
 
         dist, value = self.network.evaluate_state(node.state)
         for index, prior in enumerate(dist):
-            if prior != 0.0:
+            expansion_move = Move(node.state.side_to_move, index + 1)
+            if node.state.is_legal(expansion_move):
                 child_state = MancalaEnv.clone(node.state)
-                expansion_move = Move(child_state.side_to_move, index + 1)
                 child_state.perform_move(expansion_move)
                 child_node = AlphaNode(state=child_state, prior=prior, move=expansion_move, parent=node)
                 node.put_child(child_node)
