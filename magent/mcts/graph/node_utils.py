@@ -10,6 +10,16 @@ def select_best_child(node: Node) -> Node:
     elif len(node.children) == 1:
         return node.children[0]
 
+    return min(node.children, key=lambda child: _uct_reward(node, child))
+
+
+def select_best_child_opp(node: Node) -> Node:
+    """select_best_child returns the child that maximise upper confidence interval (UCT applied to trees)."""
+    if node.is_terminal():
+        raise ValueError('Terminal node; there are no children to select from.')
+    elif len(node.children) == 1:
+        return node.children[0]
+
     return max(node.children, key=lambda child: _uct_reward(node, child))
 
 

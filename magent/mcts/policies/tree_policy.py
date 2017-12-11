@@ -2,8 +2,10 @@ from random import choice
 
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import AlphaNode, Node
-from magent.mcts.graph.node_utils import select_best_child, select_child_with_maximum_action_value
+from magent.mcts.graph.node_utils import select_best_child, select_best_child_opp, \
+    select_child_with_maximum_action_value
 from magent.move import Move
+from magent.side import Side
 
 
 class TreePolicy(object):
@@ -21,13 +23,17 @@ class TreePolicy(object):
 class MonteCarloTreePolicy(TreePolicy):
     @staticmethod
     def select(node: Node) -> Node:
+        our_side = node.state.side_to_move
         while not node.is_terminal():
             # expand while we have nodes to expand
             if not node.is_fully_expanded():
                 return MonteCarloTreePolicy.expand(node)
             # select child and explore it
             else:
-                node = select_best_child(node)
+                if Side.get_index(our_side) == Side.get_index(node.state.side_to_move):
+                    node = select_best_child(node)
+                else:
+                    node = select_best_child_opp(node)
         return node
 
     @staticmethod
