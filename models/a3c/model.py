@@ -36,13 +36,6 @@ class ACNetwork(object):
 
         return np.random.choice(range(logits.size), p=dist), value[0][0]
 
-    def get_best_move(self, mask, state) -> (int, float, float):
-        dist, _, value = self.evaluate_move(mask, state)
-
-        action_prob = np.ndarray.flatten(dist)
-        index_of_best_move = int(np.argmax(action_prob))
-        return index_of_best_move + 1, action_prob[index_of_best_move], float(value)
-
     def evaluate_move(self, mask, state):
         sess = tf.get_default_session()
         feed_dict = {

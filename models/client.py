@@ -1,5 +1,6 @@
-import tensorflow as tf
 import logging
+
+import tensorflow as tf
 
 from magent.mancala import MancalaEnv
 from magent.side import Side
@@ -29,14 +30,12 @@ class A3Client(object):
         flip_board = env.side_to_move == Side.NORTH
         state = env.board.get_board_image(flipped=flip_board)
         mask = env.get_action_mask_with_no_pie()
-        dist, _, value = self.network.evaluate_move(mask, state)
+        dist, _, value = self.network.evaluate_move(state=state, mask=mask)
 
         return dist, float(value)
 
-    def get_best_move(self, env: MancalaEnv) -> (int, float):
-
+    def sample_state(self, env: MancalaEnv) -> (int, int):
         flip_board = env.side_to_move == Side.NORTH
         state = env.board.get_board_image(flipped=flip_board)
         mask = env.get_action_mask_with_no_pie()
-
-        return self.network.get_best_move(mask, state)
+        return self.network.sample(state=state, mask=mask)

@@ -52,4 +52,4 @@ class MCTSFactory(object):
     def alpha_mcts(network_client) -> MCTS:
         return MCTS(tree_policy=AlphaGoTreePolicy(network_client),
                     default_policy=AlphaGoDefaultPolicy(network_client),
-                    time_sec=10)
+                    time_sec=20)

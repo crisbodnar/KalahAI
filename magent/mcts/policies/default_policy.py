@@ -44,9 +44,9 @@ class AlphaGoDefaultPolicy(DefaultPolicy):
         node: AlphaNode = AlphaNode.clone(root)
         value = 0
         while not node.is_terminal():
-            best_move, _, value = self.network.get_best_move(node.state)
-            best_legal_move = Move(node.state.side_to_move, best_move)
-            node.state.perform_move(best_legal_move)
+            move_index, value = self.network.sample_state(node.state)
+            move = Move(node.state.side_to_move, move_index + 1)
+            node.state.perform_move(move)
 
         side_final_reward = node.state.compute_end_game_reward(our_side)
         reward = (1 - lmbd) * value + (lmbd * side_final_reward)
