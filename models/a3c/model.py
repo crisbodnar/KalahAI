@@ -31,16 +31,25 @@ class ACNetwork(object):
         self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
 
     def sample(self, state: np.array, mask: np.array) -> (int, int):
-        """Renormalises the logits by taking into account only vthe valid actions and generates a sample"""
-        sess = tf.get_default_session()
+        """Renormalises the logits by taking into account only the valid actions and generates a sample"""
+        dist, logits, value = self.evaluate_move(mask, state)
 
+        return np.random.choice(range(logits.size), p=dist), value[0][0]
+
+    def get_best_move(self, mask, state) -> (int, float, float):
+        dist, _, value = self.evaluate_move(mask, state)
+
+        action_prob = np.ndarray.flatten(dist)
+        index_of_best_move = int(np.argmax(action_prob))
+        return index_of_best_move + 1, action_prob[index_of_best_move], float(value)
+
+    def evaluate_move(self, mask, state):
+        sess = tf.get_default_session()
         feed_dict = {
             self.state: [state],
             self.mask: [mask],
         }
-
         logits, value = sess.run([self.logits, self.value], feed_dict)
-
         # Sampling is done in numpy because it has higher precision and it is less likely to have numerical problems
         logits = np.asarray(logits, dtype=np.float64).flatten()
         # The max logit is subtracted for numerical stability. This uses the property softmax(x - a) = softmax(x)
@@ -49,4 +58,5 @@ class ACNetwork(object):
 
         if np.sum(exp) == 0:
             raise ZeroDivisionError('There is no valid action. This should not happen')
-        return np.random.choice(range(logits.size), p=dist), value[0][0]
+
+        return dist, logits, value

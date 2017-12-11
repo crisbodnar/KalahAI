@@ -1,12 +1,13 @@
-from magent.mcts.policies.tree_policy import MonteCarloTreePolicy, TreePolicy
-from magent.mcts.policies.default_policy import MonteCarloDefaultPolicy, DefaultPolicy
+from magent.mcts.policies.tree_policy import MonteCarloTreePolicy, TreePolicy, AlphaGoTreePolicy
+from magent.mcts.policies.default_policy import MonteCarloDefaultPolicy, DefaultPolicy, AlphaGoDefaultPolicy
+
 
 tree_policies = {
-    'monte-carlo': MonteCarloTreePolicy()
+    'monte-carlo': MonteCarloTreePolicy(),
 }
 
 default_policies = {
-    'monte-carlo': MonteCarloDefaultPolicy()
+    'monte-carlo': MonteCarloDefaultPolicy(),
 }
 
 

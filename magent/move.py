@@ -20,3 +20,17 @@ class Move(object):
 
     def __str__(self) -> str:
         return "Side: %s; Hole: %d" % (Side.side_to_str(self.side), self.index)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) \
+               and self.side == other.side \
+               and Side.get_index(self.side) == Side.get_index(other.side)
+
+    def __hash__(self) -> int:
+        return self.index + (Side.get_index(self.side) * 10)
+
+    def __repr__(self) -> str:
+        return "Side: %s; Hole: %d" % (Side.side_to_str(self.side), self.index)
+
+
+
