@@ -4,7 +4,8 @@ import logging
 import magent.mcts.graph.node_utils as node_utils
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import Node
-from magent.mcts.policies.policies import DefaultPolicy, TreePolicy, default_factory, tree_factory
+from magent.mcts.policies.default_policy import AlphaGoDefaultPolicy, DefaultPolicy, MonteCarloDefaultPolicy
+from magent.mcts.policies.tree_policy import AlphaGoTreePolicy, MonteCarloTreePolicy, TreePolicy
 from magent.move import Move
 
 
@@ -26,18 +27,28 @@ class MCTS(object):
             games_played += 1
             logging.debug("%s; Game played %i" % (node, games_played))
         logging.debug("%s" % game_state_root)
-        return node_utils.select_robust_child(game_state_root).move
+        robust_child = node_utils.select_robust_child(game_state_root)
+        logging.debug("Choosing: %s" % robust_child)
+        return robust_child.move
 
 
-mcts_presets = {
-    'standard-mcts': MCTS(tree_policy=tree_factory('monte-carlo'),
-                          default_policy=default_factory('monte-carlo'),
-                          time_sec=60),
-    'test-mcts': MCTS(tree_policy=tree_factory('monte-carlo'),
-                      default_policy=default_factory('monte-carlo'),
-                      time_sec=1),
-}
+class MCTSFactory(object):
+    """Factory class to load various MCTS configurations."""
 
+    @staticmethod
+    def standard_mcts() -> MCTS:
+        return MCTS(tree_policy=MonteCarloTreePolicy(),
+                    default_policy=MonteCarloDefaultPolicy(),
+                    time_sec=60)
 
-def mcts_factory(configuration_name: str) -> MCTS:
-    return mcts_presets[configuration_name]
+    @staticmethod
+    def test_mcts() -> MCTS:
+        return MCTS(tree_policy=MonteCarloTreePolicy(),
+                    default_policy=MonteCarloDefaultPolicy(),
+                    time_sec=10)
+
+    @staticmethod
+    def alpha_mcts(network_client) -> MCTS:
+        return MCTS(tree_policy=AlphaGoTreePolicy(network_client),
+                    default_policy=AlphaGoDefaultPolicy(network_client),
+                    time_sec=20)

@@ -2,12 +2,13 @@ from random import choice
 
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import AlphaNode, Node
-from magent.mcts.graph.node_utils import select_best_child
-# TreePolicy selects and expands from the nodes already contained within the search tree.
+from magent.mcts.graph.node_utils import select_best_child, select_child_with_maximum_action_value
 from magent.move import Move
 
 
 class TreePolicy(object):
+    """TreePolicy selects and expands from the nodes already contained within the search tree."""
+
     @staticmethod
     def select(node: Node) -> Node:
         raise NotImplementedError("Select method is not implemented")
@@ -44,7 +45,7 @@ class MonteCarloTreePolicy(TreePolicy):
 class AlphaGoTreePolicy(TreePolicy):
     def __init__(self, network):
         super(AlphaGoTreePolicy, self).__init__()
-        self.neuro_net = network
+        self.network = network
 
     def select(self, node: AlphaNode) -> AlphaNode:
         while not node.is_terminal():
@@ -62,14 +63,13 @@ class AlphaGoTreePolicy(TreePolicy):
         if Move(node.state.side_to_move, 0) in node.unexplored_moves:
             node.unexplored_moves.remove(Move(node.state.side_to_move, 0))
 
-        dist, value = self.neuro_net.evaluate_state(node.state)
+        dist, value = self.network.evaluate_state(node.state)
         for index, prior in enumerate(dist):
             if prior != 0.0:
                 child_state = MancalaEnv.clone(node.state)
                 expansion_move = Move(child_state.side_to_move, index + 1)
-                action_value = child_state.perform_move(expansion_move)
+                child_state.perform_move(expansion_move)
                 child_node = AlphaNode(state=child_state, prior=prior, move=expansion_move, parent=node)
-                child_node.update(action_value)
                 node.put_child(child_node)
         # go down the tree
-        return max(node.children, key=lambda child: child.calculate_action_value())
+        return select_child_with_maximum_action_value(node)

@@ -2,21 +2,21 @@ import logging
 from random import choice
 
 from magent.mcts.graph.node import AlphaNode, Node
-# DefaultPolicy plays out the domain from a given non-terminal state to produce a value estimate (simulation).
 from magent.move import Move
 
 
 class DefaultPolicy(object):
-    # simulate run the game from given node and saves the reward for taking actions
-    @staticmethod
-    def simulate(root: Node) -> float:
+    """ DefaultPolicy plays out the domain from a given non-terminal state to produce a value estimate (simulation). """
+
+    def simulate(self, root: Node) -> float:
+        """ simulate run the game from given node and saves the reward for taking actions. """
         raise NotImplementedError("Simulate method is not implemented")
 
 
-# MonteCarloDefaultPolicy plays the domain randomly from a given non-terminal state
 class MonteCarloDefaultPolicy(DefaultPolicy):
-    @staticmethod
-    def simulate(root: Node) -> float:
+    """MonteCarloDefaultPolicy plays the domain randomly from a given non-terminal state."""
+
+    def simulate(self, root: Node) -> float:
         node = Node.clone(root)
         while not node.is_terminal():
             legal_move = choice(node.state.get_legal_moves())
@@ -25,9 +25,11 @@ class MonteCarloDefaultPolicy(DefaultPolicy):
 
 
 class AlphaGoDefaultPolicy(DefaultPolicy):
+    """plays the domain based on prior probability provided by a neuron network. Starting at non-terminal state."""
+
     def __init__(self, network):
         super(AlphaGoDefaultPolicy, self).__init__()
-        self.neuro_net = network
+        self.network = network
 
     def simulate(self, root: AlphaNode, lmbd=1) -> float:
         """
@@ -40,11 +42,10 @@ class AlphaGoDefaultPolicy(DefaultPolicy):
         value = 0
         rewards = 0
         while not node.is_terminal():
-            best_move, _, value = self.neuro_net.get_best_move(node.state)
+            best_move, _, value = self.network.get_best_move(node.state)
             legal_move = Move(node.state.side_to_move, best_move)
             move_reward = node.state.perform_move(legal_move)
             rewards += move_reward
-            node.update(move_reward)
 
         reward = (1 - lmbd) * value + (lmbd * rewards)
         logging.debug("Reward: %f; final reward: %f; Value: %f" % (reward, rewards, value))

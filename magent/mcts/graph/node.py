@@ -6,7 +6,6 @@ from magent.mancala import MancalaEnv
 from magent.move import Move
 
 
-# TODO(samialab@): Separate the Node class to MCTS and AlphaGo
 class Node(object):
     def __init__(self, state: MancalaEnv, move: Move = None, parent=None):
         self.visits = 0
@@ -29,16 +28,19 @@ class Node(object):
         self.reward += reward
         self.visits += 1
 
-    # is_fully_expanded returns true if there are no more moves to explore
     def is_fully_expanded(self) -> bool:
+        """ is_fully_expanded returns true if there are no more moves to explore. """
         return len(self.unexplored_moves) == 0
 
-    # is_terminal returns true if the node is leaf node
     def is_terminal(self) -> bool:
+        """is_terminal returns true if the node is leaf node"""
         return len(self.state.get_legal_moves()) == 0
 
-    # backpropgate pushes the reward (pay/visits) to the parents node up to the root
-    def backpropagate(self, reward):
+    def backpropagate(self, reward: float):
+        """
+        backpropgate pushes the reward (pay/visits) to the parents node up to the root
+        :param reward: reward to push to parents
+        """
         parent = self.parent
         # propagate node reward to parents'
         while parent is not None:
@@ -57,7 +59,7 @@ class AlphaNode(Node):
         self.u = prior / (1 + self.visits)  # u(s,a) exploration bonus
         self.prior = prior  # P(s,a) prior probability
 
-    def update(self, reward, c_puct=5):
+    def update(self, reward: float, c_puct: int = 5):
         """
             :param reward: leaf reward
             :param c_puct: a constant determining the level of exploration (PUCT algorithm)
@@ -66,8 +68,8 @@ class AlphaNode(Node):
         if self.parent is not None:
             self.u = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 
-    # backpropgate pushes the reward (pay/visits) to the parents node up to the root
-    def backpropagate(self, reward):
+    def backpropagate(self, reward: float):
+        """backpropgate pushes the reward (pay/visits) to the parents node up to the root"""
         parent = self.parent
         parents_path_stack = []
         # propagate node reward to parents'
@@ -80,7 +82,7 @@ class AlphaNode(Node):
             node.update(reward)
 
     def calculate_action_value(self) -> float:
-        return self.reward / self.visits + self.u
+        return self.reward / (self.visits + 1) + self.u
 
     def __str__(self):
         return "Node; Move %s, number of children: %d; visits: %d; reward: %f; U: %f; P: %f" % (

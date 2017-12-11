@@ -20,8 +20,7 @@ class A3Client(object):
         saver = FastSaver()
         try:
             logger.debug('Loading Model...')
-            # TODO (samialab): Change dir to be the data folder to be committed
-            checkpoint_path = tf.train.get_checkpoint_state(checkpoint_dir="/tmp/logs/train")
+            checkpoint_path = tf.train.get_checkpoint_state(checkpoint_dir="./saved_ckpt/a3c_random_0.9")
             saver.restore(sess=self.sess, save_path=checkpoint_path.model_checkpoint_path)
         except Exception as e:
             logger.error("Failed to restore models", str(e))
