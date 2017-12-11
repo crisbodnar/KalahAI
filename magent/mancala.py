@@ -1,9 +1,11 @@
+from copy import deepcopy
+from typing import List
+
+import numpy as np
+
 from magent.board import Board
 from magent.move import Move
 from magent.side import Side
-from copy import deepcopy
-from typing import List
-import numpy as np
 
 
 class MancalaEnv(object):
@@ -72,6 +74,18 @@ class MancalaEnv(object):
         """Returns a reward for the specified side for moving to the current state."""
         reward = self.board.get_seeds_in_store(side) - self.board.get_seeds_in_store(Side.opposite(side))
         return reward
+
+    def compute_end_game_reward(self, side: Side):
+        """Returns a reward for the specified side for moving to the end game state."""
+        if not self.is_game_over():
+            raise ValueError("compute_end_game_reward should only be called at end of the game")
+
+        reward = self.compute_final_reward(side)
+        if reward > 0:
+            return 1  # win
+        elif reward < 0:
+            return -1  # lose
+        return 0  # tie
 
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)

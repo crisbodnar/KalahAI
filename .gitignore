@@ -7,4 +7,4 @@ target/
 /models/checkpoints/
 /logs/
 /checkpoints/
-
+.DS_Store
