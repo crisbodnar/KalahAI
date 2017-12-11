@@ -33,7 +33,7 @@ def main(_):
     with tf.Session() as sess:
         with tf.variable_scope("global"):
             a3client = A3Client(sess)
-            mcts = MCTSFactory.standard_mcts()
+            mcts = MCTSFactory.alpha_mcts(a3client)
 
             state = MancalaEnv()
             try:

@@ -84,8 +84,8 @@ class AlphaNode(Node):
         # Update from root downward so the exploration bonus calculation is correct
         while len(parents_path_stack) > 0:
             node = parents_path_stack.pop()
-            on_same_side = Side.get_index(parent.state.side_to_move) == Side.get_index(our_side)
-            effective_reward = reward if on_same_side else -1 * reward
+            on_same_side = Side.get_index(node.state.side_to_move) == Side.get_index(our_side)
+            effective_reward = -1 * reward if on_same_side else reward
             node.update(effective_reward)
 
     def calculate_action_value(self) -> float:
