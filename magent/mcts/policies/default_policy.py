@@ -38,15 +38,14 @@ class AlphaGoDefaultPolicy(DefaultPolicy):
             :param lmbd: a parameter to control the weight of the value network
             :return: the rollout policy; reward for taking this path combining value network with game's winner
         """
-        node: AlphaNode = Node.clone(root)
+        node: AlphaNode = AlphaNode.clone(root)
         value = 0
-        rewards = 0
         while not node.is_terminal():
             best_move, _, value = self.network.get_best_move(node.state)
-            legal_move = Move(node.state.side_to_move, best_move)
-            move_reward = node.state.perform_move(legal_move)
-            rewards += move_reward
+            best_legal_move = Move(node.state.side_to_move, best_move)
+            node.state.perform_move(best_legal_move)
 
-        reward = (1 - lmbd) * value + (lmbd * rewards)
-        logging.debug("Reward: %f; final reward: %f; Value: %f" % (reward, rewards, value))
+        side_final_reward = node.state.compute_final_reward(root.state.side_to_move)
+        reward = (1 - lmbd) * value + (lmbd * side_final_reward)
+        logging.debug("Reward: %f; side final reward: %f; Value: %f" % (reward, side_final_reward, value))
         return reward  # (move reward + value network reward)

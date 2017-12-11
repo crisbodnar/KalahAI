@@ -55,7 +55,7 @@ class AlphaGoTreePolicy(TreePolicy):
             # select child and explore it
             else:
                 # Select action among children that gives maximum action value, Q plus bonus u(P).
-                node = max(node.children, key=lambda child: child.calculate_action_value())
+                node = select_child_with_maximum_action_value(node)
         return node
 
     def expand(self, node: AlphaNode):

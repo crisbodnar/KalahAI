@@ -56,7 +56,7 @@ class AlphaNode(Node):
     def __init__(self, state: MancalaEnv, prior, move: Move = None, parent=None):
         super(AlphaNode, self).__init__(state, move, parent)
         # u(s,a) - probational to prior probability but decays with repeated visits to encourage exploration.
-        self.u = prior / (1 + self.visits)  # u(s,a) exploration bonus
+        self.exploration_bonus = prior / (1 + self.visits)  # u(s,a) exploration bonus
         self.prior = prior  # P(s,a) prior probability
 
     def update(self, reward: float, c_puct: int = 5):
@@ -64,9 +64,10 @@ class AlphaNode(Node):
             :param reward: leaf reward
             :param c_puct: a constant determining the level of exploration (PUCT algorithm)
         """
-        super(AlphaNode, self).update(reward)
+        self.visits += 1
+        self.reward += (reward - self.reward) / self.visits
         if self.parent is not None:
-            self.u = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
+            self.exploration_bonus = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 
     def backpropagate(self, reward: float):
         """backpropgate pushes the reward (pay/visits) to the parents node up to the root"""
@@ -82,8 +83,8 @@ class AlphaNode(Node):
             node.update(reward)
 
     def calculate_action_value(self) -> float:
-        return self.reward / (self.visits + 1) + self.u
+        return self.reward + self.exploration_bonus
 
     def __str__(self):
         return "Node; Move %s, number of children: %d; visits: %d; reward: %f; U: %f; P: %f" % (
-            self.move, len(self.children), self.visits, self.reward, self.u, self.prior)
+            self.move, len(self.children), self.visits, self.reward, self.exploration_bonus, self.prior)
