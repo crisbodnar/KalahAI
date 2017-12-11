@@ -22,7 +22,7 @@ class MCTS(object):
         our_side = state.side_to_move
         while datetime.datetime.utcnow() - start_time < self.calculation_time:
             node = self.tree_policy.select(game_state_root)
-            reward = self.default_policy.simulate(node)
+            reward = self.default_policy.simulate(node, our_side)
             node.backpropagate(reward, our_side)
             # Debugging information
             games_played += 1
