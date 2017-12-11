@@ -1,10 +1,10 @@
 import datetime
 import logging
 
+import magent.mcts.graph.node_utils as node_utils
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import Node
-import magent.mcts.graph.node_utils as node_utils
-from magent.mcts.policies.policies import tree_factory, default_factory, DefaultPolicy, TreePolicy
+from magent.mcts.policies.policies import DefaultPolicy, TreePolicy, default_factory, tree_factory
 from magent.move import Move
 
 

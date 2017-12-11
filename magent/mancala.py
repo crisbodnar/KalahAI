@@ -1,9 +1,11 @@
+from copy import deepcopy
+from typing import List
+
+import numpy as np
+
 from magent.board import Board
 from magent.move import Move
 from magent.side import Side
-from copy import deepcopy
-from typing import List
-import numpy as np
 
 
 class MancalaEnv(object):

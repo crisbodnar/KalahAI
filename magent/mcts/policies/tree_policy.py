@@ -1,9 +1,8 @@
 from random import choice
 
 from magent.mancala import MancalaEnv
-from magent.mcts.graph.node import Node, AlphaNode
+from magent.mcts.graph.node import AlphaNode, Node
 from magent.mcts.graph.node_utils import select_best_child
-
 # TreePolicy selects and expands from the nodes already contained within the search tree.
 from magent.move import Move
 
@@ -15,7 +14,7 @@ class TreePolicy(object):
 
     @staticmethod
     def expand(node: Node) -> Node:
-        raise NotImplementedError("Select method is not implemented")
+        raise NotImplementedError("Expand method is not implemented")
 
 
 class MonteCarloTreePolicy(TreePolicy):
@@ -68,8 +67,9 @@ class AlphaGoTreePolicy(TreePolicy):
             if prior != 0.0:
                 child_state = MancalaEnv.clone(node.state)
                 expansion_move = Move(child_state.side_to_move, index + 1)
-                child_state.perform_move(expansion_move)
-                child_node = AlphaNode(state=child_state, prior=prior, q=value, move=expansion_move, parent=node)
+                action_value = child_state.perform_move(expansion_move)
+                child_node = AlphaNode(state=child_state, prior=prior, move=expansion_move, parent=node)
+                child_node.update(action_value)
                 node.put_child(child_node)
         # go down the tree
         return max(node.children, key=lambda child: child.calculate_action_value())

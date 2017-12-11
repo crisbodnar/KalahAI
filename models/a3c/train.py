@@ -31,7 +31,7 @@ def new_cmd(session, name, cmd, mode, logdir, shell):
                                                                                             logdir)
 
 
-def create_commands(session, num_workers, remotes, logdir, shell='zsh', mode='tmux'):
+def create_commands(session, num_workers, remotes, logdir, shell='bash', mode='tmux'):
     # for launching the TF workers and for launching tensorboard
     base_cmd = [
         'CUDA_VISIBLE_DEVICES=',

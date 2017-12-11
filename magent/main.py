@@ -13,14 +13,14 @@ from random import choice
 
 from models.client import A3Client
 
-logging.basicConfig(filename='application.log', level=logging.DEBUG)
-
 # set up logging to file - see previous section for more details
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M',
-                    filename='/tmp/main.log',
+                    filename='/tmp/kalah/main.log',
                     filemode='w')
+
+
 # define a Handler which writes INFO messages or higher to the sys.stderr
 # console = logging.StreamHandler()
 # console.setLevel(logging.DEBUG)
