@@ -59,13 +59,13 @@ class AlphaNode(Node):
         self.exploration_bonus = prior / (1 + self.visits)  # u(s,a) exploration bonus
         self.prior = prior  # P(s,a) prior probability
 
-    def update(self, reward: float, c_puct: int = 5):
+    def update(self, reward: float, c_puct: int = 1):
         """
             :param reward: leaf reward
             :param c_puct: a constant determining the level of exploration (PUCT algorithm)
         """
         self.visits += 1
-        self.reward += (reward - self.reward) / self.visits
+        self.reward += ((reward - self.reward) / self.visits)
         if self.parent is not None:
             self.exploration_bonus = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 

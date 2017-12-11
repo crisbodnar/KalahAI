@@ -20,8 +20,9 @@ class MonteCarloDefaultPolicy(DefaultPolicy):
         node = Node.clone(root)
         while not node.is_terminal():
             legal_move = choice(node.state.get_legal_moves())
-            node.update(node.state.perform_move(legal_move))
-        return node.reward
+            node.state.perform_move(legal_move)
+
+        return node.state.compute_end_game_reward(root.state.side_to_move)
 
 
 class AlphaGoDefaultPolicy(DefaultPolicy):

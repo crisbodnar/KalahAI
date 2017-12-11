@@ -34,9 +34,8 @@ class MonteCarloTreePolicy(TreePolicy):
     def expand(node: Node) -> Node:
         child_expansion_move = choice(tuple(node.unexplored_moves))
         child_state = MancalaEnv.clone(node.state)
-        move_reward = child_state.perform_move(child_expansion_move)
+        child_state.perform_move(child_expansion_move)
         child_node = Node(state=child_state, move=child_expansion_move, parent=node)
-        child_node.update(move_reward)
         node.put_child(child_node)
         # go down the tree
         return child_node

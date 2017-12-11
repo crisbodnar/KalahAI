@@ -21,7 +21,7 @@ def select_max_child(node: Node) -> Node:
         raise ValueError('Selecting max child from unexpanded node')
     elif len(node.children) == 1:
         return node.children[0]
-    return max(node.children, key=lambda child: child.reward / child.visits)
+    return max(node.children, key=lambda child: child.reward / (child.visits + 1))
 
 
 def select_robust_child(node: Node) -> Node:
@@ -48,8 +48,11 @@ def select_child_with_maximum_action_value(node: AlphaNode) -> AlphaNode:
 
 
 def _uct_reward(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:
-    return (child.reward / child.visits) + (exploration_constant * sqrt(2 * log(root.visits) / child.visits))
+    child_visits = child.visits + 1
+
+    return (child.reward / child_visits) + (exploration_constant * sqrt(2 * log(root.visits) / child_visits))
 
 
 def _lower_confidence_interval(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:
-    return (child.reward / child.visits) - (exploration_constant * sqrt(2 * log(root.visits) / child.visits))
+    child_visits = child.visits + 1
+    return (child.reward / child_visits) - (exploration_constant * sqrt(2 * log(root.visits) / child_visits))
