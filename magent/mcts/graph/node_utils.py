@@ -21,7 +21,7 @@ def select_max_child(node: Node) -> Node:
         raise ValueError('Selecting max child from unexpanded node')
     elif len(node.children) == 1:
         return node.children[0]
-    return max(node.children, key=lambda child: child.reward / (child.visits + 1))
+    return max(node.children, key=lambda child: child.reward / (child.visits))
 
 
 def select_robust_child(node: Node) -> Node:

@@ -31,9 +31,9 @@ class MCTS(object):
             games_played += 1
             logging.debug("%s; Game played %i" % (node, games_played))
         logging.debug("%s" % game_state_root)
-        robust_child = node_utils.select_robust_child(game_state_root)
-        logging.info("Choosing: %s" % robust_child)
-        return robust_child.move
+        chosen_child = node_utils.select_robust_child(game_state_root)
+        logging.info("Choosing: %s" % chosen_child)
+        return chosen_child.move
 
 
 class MCTSFactory(object):
