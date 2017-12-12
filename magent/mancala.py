@@ -247,8 +247,7 @@ class MancalaEnv(object):
         hashkey = 0
         hashkey += primes[0] * Side.get_index(self.side_to_move)
         hashkey += primes[1] * int(self.north_moved)
-        for hole in range(self.board.holes+1):
+        for hole in range(self.board.holes + 1):
             hashkey += primes[2 + hole] * self.board.board[0][hole]
             hashkey += primes[10 + hole] * self.board.board[1][hole]
         return hashkey
-

@@ -1,18 +1,17 @@
 from magent.mancala import MancalaEnv
 from magent.side import Side
 
-_weight_1 = 3
-_weight_2 = 5
-_weight_3 = 20
 
-
-def _cluster_towards_scoring_well(state, side) -> int:
+def _cluster_towards_scoring_store(state, side) -> float:
+    """Favour holes that are closer to store. Mapped to value between [0, 1]"""
     reward = 0
     for i in range(state.board.holes + 1, 1):
         seeds = state.board.get_seeds(side, i)
         if seeds > 0:
             reward += seeds * i
-    return reward
+    total_seeds_in_game = 98.0
+    max_reward = 7.0 * total_seeds_in_game
+    return reward / max_reward
 
 
 def _defend_seeds(state, side) -> int:
@@ -36,16 +35,25 @@ def _defend_seeds(state, side) -> int:
 
             if state.board.get_seeds_op(side, i) == 2 * state.board.holes + 1 - (i - exposed_hole_index):
                 capture_by_greater_index = max(capture_by_greater_index, state.board.get_seeds(side, i) + 1)
-                
-    return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index))
+
+    return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index)) / 98.0
 
 
-def _scoring_well_diff(state, side) -> int:
+def _scoring_store_diff(state, side) -> float:
+    """Calculates the differences between two stores. Mapped to value between [0, 1]"""
     reward = state.board.get_seeds_in_store(side) - state.board.get_seeds_in_store(Side.opposite(side))
-    return reward
+    total_seeds_in_game = 98.0
+
+    return ((reward / total_seeds_in_game) + 1) / 2
 
 
-def evaluate_node(state: MancalaEnv, side: Side):
-    return _scoring_well_diff(state, side) * _weight_1 \
-           - _defend_seeds(state, side) / _weight_2 \
-           + _cluster_towards_scoring_well(state, side) / _weight_3
+# Sum of weights should be 1
+_weight_store_diff = 0.6
+_weight_defend_seeds = 0.3
+_weight_cluster_at_store = 0.1
+
+
+def evaluate_node(state: MancalaEnv, parent_side: Side) -> float:
+    return (_scoring_store_diff(state, parent_side) * _weight_store_diff) \
+           + (_cluster_towards_scoring_store(state, state.side_to_move) * _weight_defend_seeds) \
+           - (_defend_seeds(state, state.side_to_move) / _weight_defend_seeds)

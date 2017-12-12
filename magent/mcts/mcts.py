@@ -25,16 +25,15 @@ class MCTS(object):
         games_played = 0
         while datetime.datetime.utcnow() - start_time < self.calculation_time:
             node = self.tree_policy.select(game_state_root)
-
             final_state = self.default_policy.simulate(node)
             node.backpropagate(final_state)
             # Debugging information
             games_played += 1
             logging.debug("%s; Game played %i" % (node, games_played))
         logging.debug("%s" % game_state_root)
-        robust_child = node_utils.select_robust_child(game_state_root)
-        logging.info("Choosing: %s" % robust_child)
-        return robust_child.move
+        chosen_child = node_utils.select_robust_child(game_state_root)
+        logging.info("Choosing: %s" % chosen_child)
+        return chosen_child.move
 
 
 class MCTSFactory(object):
@@ -51,6 +50,12 @@ class MCTSFactory(object):
         return MCTS(tree_policy=MonteCarloTreePolicy(),
                     default_policy=MonteCarloDefaultPolicy(),
                     time_sec=10)
+
+    @staticmethod
+    def long_test_mcts(sec: int = 0) -> MCTS:
+        return MCTS(tree_policy=MonteCarloTreePolicy(),
+                    default_policy=MonteCarloDefaultPolicy(),
+                    time_sec=sec)
 
     @staticmethod
     def alpha_mcts(network_client) -> MCTS:

@@ -14,7 +14,7 @@ class Node(object):
         self.children = []
         self.parent = parent
         self.move = move
-        self.value = 0
+        self.value = -1
         self.unexplored_moves = set(state.get_legal_moves())
 
     @staticmethod
@@ -28,6 +28,13 @@ class Node(object):
     def update(self, reward):
         self.reward += reward
         self.visits += 1
+        for child in self.children:
+            self.value = max(self.value, child.value)
+
+    def _make_temp_child(self, move: Move) -> MancalaEnv:
+        child_state = MancalaEnv.clone(self.state)
+        child_state.perform_move(move)
+        return child_state
 
     # def rave_update(self):
 
@@ -52,8 +59,8 @@ class Node(object):
             node = node.parent
 
     def __str__(self):
-        return "Node; Move %s, number of children: %d; visits: %d; reward: %f" % (
-            self.move, len(self.children), self.visits, self.reward)
+        return "Node; Move %s, number of children: %d; visits: %d; reward: %f; value: %f" % (
+            self.move, len(self.children), self.visits, self.reward, self.value)
 
 
 class AlphaNode(Node):

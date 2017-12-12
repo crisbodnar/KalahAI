@@ -1,8 +1,9 @@
 from random import choice
 
 from magent.mancala import MancalaEnv
+from magent.mcts import evaluation
+from magent.mcts.graph import node_utils
 from magent.mcts.graph.node import AlphaNode, Node
-from magent.mcts.graph.node_utils import select_best_child, select_child_with_maximum_action_value
 from magent.move import Move
 
 
@@ -27,16 +28,17 @@ class MonteCarloTreePolicy(TreePolicy):
                 return MonteCarloTreePolicy.expand(node)
             # select child and explore it
             else:
-                node = select_best_child(node)
+                node = node_utils.rave_selection(node)
         return node
 
     @staticmethod
-    def expand(node: Node) -> Node:
-        child_expansion_move = choice(tuple(node.unexplored_moves))
-        child_state = MancalaEnv.clone(node.state)
+    def expand(parent: Node) -> Node:
+        child_expansion_move = choice(tuple(parent.unexplored_moves))
+        child_state = MancalaEnv.clone(parent.state)
         child_state.perform_move(child_expansion_move)
-        child_node = Node(state=child_state, move=child_expansion_move, parent=node)
-        node.put_child(child_node)
+        child_node = Node(state=child_state, move=child_expansion_move, parent=parent)
+        child_node.value = evaluation.evaluate_node(state=child_state, parent_side=parent.state.side_to_move)
+        parent.put_child(child_node)
         # go down the tree
         return child_node
 
@@ -54,7 +56,7 @@ class AlphaGoTreePolicy(TreePolicy):
             # select child and explore it
             else:
                 # Select action among children that gives maximum action value, Q plus bonus u(P).
-                node = select_child_with_maximum_action_value(node)
+                node = node_utils.select_child_with_maximum_action_value(node)
         return node
 
     def expand(self, node: AlphaNode):
@@ -71,4 +73,4 @@ class AlphaGoTreePolicy(TreePolicy):
                 child_node = AlphaNode(state=child_state, prior=prior, move=expansion_move, parent=node)
                 node.put_child(child_node)
         # go down the tree
-        return select_child_with_maximum_action_value(node)
+        return node_utils.select_child_with_maximum_action_value(node)
