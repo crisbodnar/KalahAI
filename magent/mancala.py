@@ -81,11 +81,12 @@ class MancalaEnv(object):
             raise ValueError("compute_end_game_reward should only be called at end of the game")
 
         reward = self.compute_final_reward(side)
-        if reward > 0:
-            return 1  # win
-        elif reward < 0:
-            return 0  # lose
-        return 0.5  # tie
+        return reward / 98.0
+        # if reward > 0:
+        #     return 1  # win
+        # elif reward < 0:
+        #     return 0  # lose
+        # return 0.5  # tie
 
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)
@@ -247,8 +248,7 @@ class MancalaEnv(object):
         hashkey = 0
         hashkey += primes[0] * Side.get_index(self.side_to_move)
         hashkey += primes[1] * int(self.north_moved)
-        for hole in range(self.board.holes+1):
+        for hole in range(self.board.holes + 1):
             hashkey += primes[2 + hole] * self.board.board[0][hole]
             hashkey += primes[10 + hole] * self.board.board[1][hole]
         return hashkey
-

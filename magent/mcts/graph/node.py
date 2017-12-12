@@ -3,6 +3,7 @@ from copy import deepcopy
 from numpy.ma import sqrt
 
 from magent.mancala import MancalaEnv
+from magent.mcts.evaluation import evaluate_node
 from magent.move import Move
 
 
@@ -28,6 +29,15 @@ class Node(object):
     def update(self, reward):
         self.reward += reward
         self.visits += 1
+        self.value = self._evaluate_node()
+
+    def _make_temp_child(self, move: Move) -> MancalaEnv:
+        child_state = MancalaEnv.clone(self.state)
+        child_state.perform_move(move)
+        return child_state
+
+    def _evaluate_node(self) -> float:
+        return max(map(lambda x: evaluate_node(self._make_temp_child(x)), self.state.get_legal_moves()))
 
     # def rave_update(self):
 

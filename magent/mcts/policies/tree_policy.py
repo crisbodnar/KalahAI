@@ -2,7 +2,7 @@ from random import choice
 
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import AlphaNode, Node
-from magent.mcts.graph.node_utils import select_best_child, select_child_with_maximum_action_value
+from magent.mcts.graph.node_utils import rave_selection, select_child_with_maximum_action_value
 from magent.move import Move
 
 
@@ -27,7 +27,7 @@ class MonteCarloTreePolicy(TreePolicy):
                 return MonteCarloTreePolicy.expand(node)
             # select child and explore it
             else:
-                node = select_best_child(node)
+                node = rave_selection(node)
         return node
 
     @staticmethod

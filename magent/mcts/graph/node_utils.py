@@ -56,3 +56,22 @@ def _uct_reward(root: Node, child: Node, exploration_constant: float = sqrt(2)) 
 def _lower_confidence_interval(root: Node, child: Node, exploration_constant: float = sqrt(2)) -> float:
     child_visits = child.visits + 1
     return (child.reward / child_visits) - (exploration_constant * sqrt(2 * log(root.visits) / child_visits))
+
+
+def rave_selection(node: Node) -> Node:
+    """returns the child that maximise the heuristic value."""
+    if node.is_terminal():
+        raise ValueError('Terminal node; there are no children to select from.')
+    elif len(node.children) == 1:
+        return node.children[0]
+
+    return max(node.children, key=lambda child: _uct_rave_reward(node, child))
+
+
+def _uct_rave_reward(root: Node, child: Node, exploration_constant: float = sqrt(2)) -> float:
+    child_visits = child.visits + 1
+    return _rave_reward(child) + (exploration_constant * sqrt(2 * log(root.visits) / child_visits))
+
+
+def _rave_reward(node: Node, alpha=0.5):
+    return (1 - alpha) * node.reward / node.visits + alpha * node.value

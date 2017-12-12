@@ -36,7 +36,7 @@ def _defend_seeds(state, side) -> int:
 
             if state.board.get_seeds_op(side, i) == 2 * state.board.holes + 1 - (i - exposed_hole_index):
                 capture_by_greater_index = max(capture_by_greater_index, state.board.get_seeds(side, i) + 1)
-                
+
     return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index))
 
 
@@ -45,7 +45,7 @@ def _scoring_well_diff(state, side) -> int:
     return reward
 
 
-def evaluate_node(state: MancalaEnv, side: Side):
-    return _scoring_well_diff(state, side) * _weight_1 \
-           - _defend_seeds(state, side) / _weight_2 \
-           + _cluster_towards_scoring_well(state, side) / _weight_3
+def evaluate_node(state: MancalaEnv) -> float:
+    return _scoring_well_diff(state, state.side_to_move) * _weight_1 \
+           - _defend_seeds(state, state.side_to_move) / _weight_2 \
+           + _cluster_towards_scoring_well(state, state.side_to_move) / _weight_3
