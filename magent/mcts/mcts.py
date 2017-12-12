@@ -25,6 +25,7 @@ class MCTS(object):
         games_played = 0
         while datetime.datetime.utcnow() - start_time < self.calculation_time:
             node = self.tree_policy.select(game_state_root)
+
             final_state = self.default_policy.simulate(node)
             node.backpropagate(final_state)
             # Debugging information
