@@ -16,10 +16,13 @@ class MCTS(object):
         self.calculation_time: datetime.timedelta = datetime.timedelta(seconds=time_sec)
 
     def search(self, state: MancalaEnv) -> Move:
+        # short circuit last move
+        if len(state.get_legal_moves()) == 1:
+            return state.get_legal_moves()[0]
+
         game_state_root = Node(state=MancalaEnv.clone(state))
         start_time = datetime.datetime.utcnow()
         games_played = 0
-        our_side = state.side_to_move
         while datetime.datetime.utcnow() - start_time < self.calculation_time:
             node = self.tree_policy.select(game_state_root)
             final_state = self.default_policy.simulate(node)
