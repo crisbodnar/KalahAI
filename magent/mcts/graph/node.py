@@ -41,11 +41,12 @@ class Node(object):
         backpropgate pushes the reward (pay/visits) to the parents node up to the root
         :param final_state: reward to push to parents
         """
-        parent = self.parent
+        node = self
         # propagate node reward to parents'
-        while parent is not None:
-            parent.update(final_state.compute_end_game_reward(parent.side))
-            parent = parent.parent
+        while node is not None:
+            side = node.parent.state.side_to_move if node.parent is not None else node.state.side_to_move  # root node
+            node.update(final_state.compute_end_game_reward(side))
+            node = node.parent
 
     def __str__(self):
         return "Node; Move %s, number of children: %d; visits: %d; reward: %f" % (

@@ -11,7 +11,7 @@ from magent.protocol.msg_type import MsgType
 from models.client import A3Client
 
 # set up logging to file - see previous section for more details
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M',
                     filename='/tmp/kalah/main.log',
