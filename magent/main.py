@@ -11,7 +11,7 @@ from magent.protocol.msg_type import MsgType
 from models.client import A3Client
 
 # set up logging to file - see previous section for more details
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M',
                     filename='/tmp/kalah/main.log',
@@ -33,7 +33,7 @@ def main(_):
     with tf.Session() as sess:
         with tf.variable_scope("global"):
             a3client = A3Client(sess)
-            mcts = MCTSFactory.alpha_mcts(a3client)
+            mcts = MCTSFactory.standard_mcts()
 
             state = MancalaEnv()
             try:

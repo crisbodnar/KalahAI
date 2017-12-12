@@ -84,8 +84,8 @@ class MancalaEnv(object):
         if reward > 0:
             return 1  # win
         elif reward < 0:
-            return -1  # lose
-        return 0  # tie
+            return 0  # lose
+        return 0.5  # tie
 
     def is_game_over(self) -> bool:
         return MancalaEnv.game_over(self.board)

@@ -50,7 +50,8 @@ def select_child_with_maximum_action_value(node: AlphaNode) -> AlphaNode:
 def _uct_reward(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:
     child_visits = child.visits + 1
 
-    return (child.reward / child_visits) + (exploration_constant * sqrt(2 * log(root.visits) / child_visits))
+    test = sqrt(2 * log(root.visits) / child_visits)
+    return (child.reward / child_visits) + (exploration_constant * test)
 
 
 def _lower_confidence_interval(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:

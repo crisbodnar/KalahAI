@@ -4,7 +4,6 @@ from numpy.ma import sqrt
 
 from magent.mancala import MancalaEnv
 from magent.move import Move
-from magent.side import Side
 
 
 class Node(object):
@@ -37,19 +36,17 @@ class Node(object):
         """is_terminal returns true if the node is leaf node"""
         return len(self.state.get_legal_moves()) == 0
 
-    def backpropagate(self, reward: float, our_side: Side):
+    def backpropagate(self, final_state: MancalaEnv):
         """
         backpropgate pushes the reward (pay/visits) to the parents node up to the root
-        :param reward: reward to push to parents
-        :param our_side: Our side in the game
+        :param final_state: reward to push to parents
         """
-        parent = self.parent
+        node = self
         # propagate node reward to parents'
-        while parent is not None:
-            on_same_side = Side.get_index(parent.state.side_to_move) == Side.get_index(our_side)
-            effective_reward = -1 * reward if on_same_side else reward
-            parent.update(effective_reward)
-            parent = parent.parent
+        while node is not None:
+            side = node.parent.state.side_to_move if node.parent is not None else node.state.side_to_move  # root node
+            node.update(final_state.compute_end_game_reward(side))
+            node = node.parent
 
     def __str__(self):
         return "Node; Move %s, number of children: %d; visits: %d; reward: %f" % (
@@ -63,7 +60,7 @@ class AlphaNode(Node):
         self.exploration_bonus = prior / (1 + self.visits)  # u(s,a) exploration bonus
         self.prior = prior  # P(s,a) prior probability
 
-    def update(self, reward: float, c_puct: int = 1/sqrt(2)):
+    def update(self, reward: float, c_puct: int = 1 / sqrt(2)):
         """
             :param reward: leaf reward
             :param c_puct: a constant determining the level of exploration (PUCT algorithm)
@@ -73,7 +70,7 @@ class AlphaNode(Node):
         if self.parent is not None:
             self.exploration_bonus = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 
-    def backpropagate(self, reward: float, our_side: Side):
+    def backpropagate(self, final_state: float):
         """backpropgate pushes the reward (pay/visits) to the parents node up to the root"""
         parent = self.parent
         parents_path_stack = []
@@ -84,9 +81,7 @@ class AlphaNode(Node):
         # Update from root downward so the exploration bonus calculation is correct
         while len(parents_path_stack) > 0:
             node = parents_path_stack.pop()
-            on_same_side = Side.get_index(node.state.side_to_move) == Side.get_index(our_side)
-            effective_reward = -1 * reward if on_same_side else reward
-            node.update(effective_reward)
+            node.update(final_state)
 
     def calculate_action_value(self) -> float:
         return self.reward + self.exploration_bonus
