@@ -52,6 +52,12 @@ class MCTSFactory(object):
                     time_sec=10)
 
     @staticmethod
+    def long_test_mcts(sec: int = 0) -> MCTS:
+        return MCTS(tree_policy=MonteCarloTreePolicy(),
+                    default_policy=MonteCarloDefaultPolicy(),
+                    time_sec=sec)
+
+    @staticmethod
     def alpha_mcts(network_client) -> MCTS:
         return MCTS(tree_policy=AlphaGoTreePolicy(network_client),
                     default_policy=AlphaGoDefaultPolicy(network_client),

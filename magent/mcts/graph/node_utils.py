@@ -65,9 +65,9 @@ def rave_selection(node: Node) -> Node:
     return max(node.children, key=lambda child: _uct_rave_reward(node, child))
 
 
-def _uct_rave_reward(root: Node, child: Node, exploration_constant: float = sqrt(2)) -> float:
+def _uct_rave_reward(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:
     return _rave_reward(child) + (exploration_constant * sqrt(2 * log(root.visits) / child.visits))
 
 
-def _rave_reward(node: Node, alpha: float = 0.4) -> float:
+def _rave_reward(node: Node, alpha: float = 0.3) -> float:
     return (1 - alpha) * (node.reward / node.visits) + alpha * node.value

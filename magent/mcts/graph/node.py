@@ -14,7 +14,7 @@ class Node(object):
         self.children = []
         self.parent = parent
         self.move = move
-        self.value = 0
+        self.value = -1
         self.unexplored_moves = set(state.get_legal_moves())
 
     @staticmethod
@@ -28,10 +28,8 @@ class Node(object):
     def update(self, reward):
         self.reward += reward
         self.visits += 1
-        max_value = -1
         for child in self.children:
-            max_value = max(max_value, child.value)
-        self.value = max_value
+            self.value = max(self.value, child.value)
 
     def _make_temp_child(self, move: Move) -> MancalaEnv:
         child_state = MancalaEnv.clone(self.state)
@@ -57,7 +55,6 @@ class Node(object):
         # propagate node reward to parents'
         while node is not None:
             side = node.parent.state.side_to_move if node.parent is not None else node.state.side_to_move  # root node
-
             node.update(final_state.compute_end_game_reward(side))
             node = node.parent
 
