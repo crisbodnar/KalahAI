@@ -29,6 +29,8 @@ class Node(object):
         self.reward += reward
         self.visits += 1
 
+    # def rave_update(self):
+
     def is_fully_expanded(self) -> bool:
         """ is_fully_expanded returns true if there are no more moves to explore. """
         return len(self.unexplored_moves) == 0
@@ -61,7 +63,7 @@ class AlphaNode(Node):
         self.exploration_bonus = prior / (1 + self.visits)  # u(s,a) exploration bonus
         self.prior = prior  # P(s,a) prior probability
 
-    def update(self, reward: float, c_puct: int = 1 / sqrt(2)):
+    def update(self, reward: float, c_puct: int = 5):
         """
             :param reward: leaf reward
             :param c_puct: a constant determining the level of exploration (PUCT algorithm)
