@@ -47,7 +47,7 @@ class AlphaGoDefaultPolicy(DefaultPolicy):
             move = Move(node.state.side_to_move, move_index + 1)
             node.state.perform_move(move)
 
-        side_final_reward = node.state.compute_end_game_reward(root.state.side_to_move)
-        reward = (1 - lmbd) * value + (lmbd * side_final_reward)
-        logging.debug("Reward: %f; side final reward: %f; Value: %f" % (reward, side_final_reward, value))
-        return reward  # (move reward + value network reward)
+        # side_final_reward = node.state.compute_end_game_reward(root.state.side_to_move)
+        # reward = (1 - lmbd) * value + (lmbd * side_final_reward)
+        # logging.debug("Reward: %f; side final reward: %f; Value: %f" % (reward, side_final_reward, value))
+        return node.state  # (move reward + value network reward)
