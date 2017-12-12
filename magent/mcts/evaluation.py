@@ -40,12 +40,14 @@ def _defend_seeds(state, side) -> int:
     return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index))
 
 
-def _scoring_well_diff(state, side) -> int:
+def _scoring_well_diff(state, side) -> float:
     reward = state.board.get_seeds_in_store(side) - state.board.get_seeds_in_store(Side.opposite(side))
-    return reward
+    total_seeds_in_game = 98.0
+
+    return reward / total_seeds_in_game
 
 
-def evaluate_node(state: MancalaEnv) -> float:
-    return _scoring_well_diff(state, state.side_to_move) * _weight_1 \
-           - _defend_seeds(state, state.side_to_move) / _weight_2 \
-           + _cluster_towards_scoring_well(state, state.side_to_move) / _weight_3
+def evaluate_node(state: MancalaEnv, parent_side: Side) -> float:
+    return _scoring_well_diff(state, parent_side)
+    # - _defend_seeds(state, state.side_to_move) / _weight_2 \
+    # + _cluster_towards_scoring_well(state, state.side_to_move) / _weight_3
