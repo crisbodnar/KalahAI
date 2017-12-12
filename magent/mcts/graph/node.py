@@ -14,6 +14,7 @@ class Node(object):
         self.children = []
         self.parent = parent
         self.move = move
+        self.value = 0
         self.unexplored_moves = set(state.get_legal_moves())
 
     @staticmethod
@@ -70,7 +71,7 @@ class AlphaNode(Node):
         if self.parent is not None:
             self.exploration_bonus = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 
-    def backpropagate(self, final_state: float):
+    def backpropagate(self, final_state: MancalaEnv):
         """backpropgate pushes the reward (pay/visits) to the parents node up to the root"""
         parent = self.parent
         parents_path_stack = []
@@ -81,7 +82,7 @@ class AlphaNode(Node):
         # Update from root downward so the exploration bonus calculation is correct
         while len(parents_path_stack) > 0:
             node = parents_path_stack.pop()
-            node.update(final_state)
+            node.update(final_state.compute_end_game_reward(node.state.side_to_move))
 
     def calculate_action_value(self) -> float:
         return self.reward + self.exploration_bonus
