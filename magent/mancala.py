@@ -239,3 +239,16 @@ class MancalaEnv(object):
         if sow_hole == 0 and (move.side == Side.NORTH or north_moved):
             return move.side  # Last seed was placed in the store, so side moves again
         return Side.opposite(move.side)
+
+    def __hash__(self) -> int:
+        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
+                  101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163]
+
+        hashkey = 0
+        hashkey += primes[0] * Side.get_index(self.side_to_move)
+        hashkey += primes[1] * int(self.north_moved)
+        for hole in range(self.board.holes+1):
+            hashkey += primes[2 + hole] * self.board.board[0][hole]
+            hashkey += primes[10 + hole] * self.board.board[1][hole]
+        return hashkey
+

@@ -14,17 +14,23 @@ class MCTS(object):
         self.tree_policy: TreePolicy = tree_policy
         self.default_policy: DefaultPolicy = default_policy
         self.calculation_time: datetime.timedelta = datetime.timedelta(seconds=time_sec)
+        self.node_map = {}
 
     def search(self, state: MancalaEnv) -> Move:
         # short circuit last move
         if len(state.get_legal_moves()) == 1:
             return state.get_legal_moves()[0]
 
-        game_state_root = Node(state=MancalaEnv.clone(state))
+        if state not in self.node_map:
+            game_state_root = Node(state=MancalaEnv.clone(state))
+        else:
+            game_state_root = self.node_map[state]
         start_time = datetime.datetime.utcnow()
         games_played = 0
         while datetime.datetime.utcnow() - start_time < self.calculation_time:
             node = self.tree_policy.select(game_state_root)
+            self.node_map[node.state] = node
+
             final_state = self.default_policy.simulate(node)
             node.backpropagate(final_state)
             # Debugging information
