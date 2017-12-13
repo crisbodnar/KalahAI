@@ -46,18 +46,6 @@ class Node(object):
         """is_terminal returns true if the node is leaf node"""
         return len(self.state.get_legal_moves()) == 0
 
-    def backpropagate(self, final_state: MancalaEnv):
-        """
-        backpropgate pushes the reward (pay/visits) to the parents node up to the root
-        :param final_state: reward to push to parents
-        """
-        node = self
-        # propagate node reward to parents'
-        while node is not None:
-            side = node.parent.state.side_to_move if node.parent is not None else node.state.side_to_move  # root node
-            node.update(final_state.compute_end_game_reward(side))
-            node = node.parent
-
     def __str__(self):
         return "Node; Move %s, number of children: %d; visits: %d; reward: %f; value: %f" % (
             self.move, len(self.children), self.visits, self.reward, self.value)
@@ -80,22 +68,9 @@ class AlphaNode(Node):
         if self.parent is not None:
             self.exploration_bonus = c_puct * self.prior * sqrt(self.parent.visits) / (1 + self.visits)
 
-    def backpropagate(self, final_state: MancalaEnv):
-        """backpropgate pushes the reward (pay/visits) to the parents node up to the root"""
-        parent = self.parent
-        parents_path_stack = []
-        # propagate node reward to parents'
-        while parent is not None:
-            parents_path_stack.append(parent)
-            parent = parent.parent
-        # Update from root downward so the exploration bonus calculation is correct
-        while len(parents_path_stack) > 0:
-            node = parents_path_stack.pop()
-            node.update(final_state.compute_end_game_reward(node.state.side_to_move))
-
     def calculate_action_value(self) -> float:
         return self.reward + self.exploration_bonus
 
     def __str__(self):
-        return "Node; Move %s, number of children: %d; visits: %d; reward: %f; U: %f; P: %f" % (
+        return "Node; Move %s, number of children: %d; visits: %d; reward: %f; exploration bonus: %f; prior: %f" % (
             self.move, len(self.children), self.visits, self.reward, self.exploration_bonus, self.prior)

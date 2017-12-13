@@ -5,6 +5,7 @@ from magent.mcts import evaluation
 from magent.mcts.graph import node_utils
 from magent.mcts.graph.node import AlphaNode, Node
 from magent.move import Move
+from models.client import A3Client
 
 
 class TreePolicy(object):
@@ -44,7 +45,7 @@ class MonteCarloTreePolicy(TreePolicy):
 
 
 class AlphaGoTreePolicy(TreePolicy):
-    def __init__(self, network):
+    def __init__(self, network: A3Client):
         super(AlphaGoTreePolicy, self).__init__()
         self.network = network
 

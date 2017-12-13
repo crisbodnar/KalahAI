@@ -4,6 +4,7 @@ from random import choice
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import AlphaNode, Node
 from magent.move import Move
+from models.client import A3Client
 
 
 class DefaultPolicy(object):
@@ -29,25 +30,20 @@ class MonteCarloDefaultPolicy(DefaultPolicy):
 class AlphaGoDefaultPolicy(DefaultPolicy):
     """plays the domain based on prior probability provided by a neuron network. Starting at non-terminal state."""
 
-    def __init__(self, network):
+    def __init__(self, network: A3Client):
         super(AlphaGoDefaultPolicy, self).__init__()
         self.network = network
 
-    def simulate(self, root: AlphaNode, lmbd=1) -> float:
+    def simulate(self, root: AlphaNode) -> float:
         """
             runs a simulation from the root to the end of the game
             :param root: the starting node for the simulation
-            :param lmbd: a parameter to control the weight of the value network
             :return: the rollout policy; reward for taking this path combining value network with game's winner
         """
         node: AlphaNode = AlphaNode.clone(root)
-        value = 0
         while not node.is_terminal():
-            move_index, value = self.network.sample_state(node.state)
+            move_index, _ = self.network.sample_state(node.state)
             move = Move(node.state.side_to_move, move_index + 1)
             node.state.perform_move(move)
 
-        # side_final_reward = node.state.compute_end_game_reward(root.state.side_to_move)
-        # reward = (1 - lmbd) * value + (lmbd * side_final_reward)
-        # logging.debug("Reward: %f; side final reward: %f; Value: %f" % (reward, side_final_reward, value))
-        return node.state  # (move reward + value network reward)
+        return node.state
