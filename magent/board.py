@@ -93,6 +93,18 @@ class Board(object):
             return np.reshape(np.array(self.get_flipped_board()), (2, 8, 1))
         return np.reshape(np.array(self.board), (2, 8, 1))
 
+    def get_board_image_with_heuristics(self, side: Side):
+        delta_store = self.get_seeds_in_store(Side.SOUTH) - self.get_seeds_in_store(Side.NORTH)
+        south_pos_score = 0
+        north_pos_score = 0
+        for hole in range(1, self.holes + 1):
+            south_pos_score += hole * self.get_seeds(Side.SOUTH, hole)
+            north_pos_score += hole * self.get_seeds(Side.NORTH, hole)
+        side_to_move = Side.get_index(side)
+        board = np.asarray(self.get_board_image()).flatten()
+        board = np.append(board, [delta_store, south_pos_score, north_pos_score, side_to_move])
+        return board
+
     def __str__(self):
         board_str = str(self.board[Side.get_index(Side.NORTH)][0]) + " --"
         for i in range(self.holes, 0, -1):

@@ -51,3 +51,17 @@ class AlphaGoDefaultPolicy(DefaultPolicy):
         # reward = (1 - lmbd) * value + (lmbd * side_final_reward)
         # logging.debug("Reward: %f; side final reward: %f; Value: %f" % (reward, side_final_reward, value))
         return node.state  # (move reward + value network reward)
+
+
+class TDLambdaPolicy(DefaultPolicy):
+    def __init__(self, td_client):
+        super(TDLambdaPolicy, self).__init__()
+        self.td_client = td_client
+
+    def simulate(self, root: Node) -> MancalaEnv:
+        node = Node.clone(root)
+        while not node.is_terminal():
+            move, _ = self.td_client.sample_state(node.state)
+            node.state.perform_move(move)
+
+        return node.state

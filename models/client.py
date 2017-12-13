@@ -6,6 +6,9 @@ from magent.mancala import MancalaEnv
 from magent.side import Side
 from models.a3c.helpers import FastSaver
 from models.a3c.model import ACNetwork
+from models.tdlambda.model import Model
+from models.tdlambda.agent import TDAgent
+import os
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -39,3 +42,17 @@ class A3Client(object):
         state = env.board.get_board_image(flipped=flip_board)
         mask = env.get_action_mask_with_no_pie()
         return self.network.sample(state=state, mask=mask)
+
+
+class TDClient(object):
+    def __init__(self, sess):
+        self.sess = sess
+        path = 'models/'
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        self.network = Model(sess, path, path, 'checkpoints/', restore=True)
+        self.td_agent = TDAgent(self.network)
+
+    def sample_state(self, env: MancalaEnv) -> (int, int):
+        return self.td_agent.get_action(env), 0

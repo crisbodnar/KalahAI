@@ -5,7 +5,7 @@ from models.a3c.helpers import normalized_columns_initializer
 
 class ACNetwork(object):
     def __init__(self, state_shape: [int], num_act: int):
-        w_init = tf.contrib.layers.xavier_initializer()
+        w_init = tf.random_normal_initializer(0.02)
 
         # Base network
         self.state = tf.placeholder(tf.float32, shape=[None] + state_shape)

@@ -4,7 +4,8 @@ import logging
 import magent.mcts.graph.node_utils as node_utils
 from magent.mancala import MancalaEnv
 from magent.mcts.graph.node import Node
-from magent.mcts.policies.default_policy import AlphaGoDefaultPolicy, DefaultPolicy, MonteCarloDefaultPolicy
+from magent.mcts.policies.default_policy import AlphaGoDefaultPolicy, DefaultPolicy, MonteCarloDefaultPolicy, \
+    TDLambdaPolicy
 from magent.mcts.policies.tree_policy import AlphaGoTreePolicy, MonteCarloTreePolicy, TreePolicy
 from magent.move import Move
 
@@ -56,6 +57,12 @@ class MCTSFactory(object):
         return MCTS(tree_policy=MonteCarloTreePolicy(),
                     default_policy=MonteCarloDefaultPolicy(),
                     time_sec=sec)
+
+    @staticmethod
+    def td_mcts(td_client) -> MCTS:
+        return MCTS(tree_policy=MonteCarloTreePolicy(),
+                    default_policy=TDLambdaPolicy(td_client),
+                    time_sec=10)
 
     @staticmethod
     def alpha_mcts(network_client) -> MCTS:

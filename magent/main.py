@@ -8,7 +8,7 @@ from magent.mcts.mcts import MCTSFactory
 from magent.move import Move
 from magent.protocol.invalid_message_exception import InvalidMessageException
 from magent.protocol.msg_type import MsgType
-from models.client import A3Client
+from models.client import A3Client, TDClient
 
 # set up logging to file - see previous section for more details
 logging.basicConfig(level=logging.DEBUG,
@@ -31,9 +31,9 @@ logging.basicConfig(level=logging.DEBUG,
 
 def main(_):
     with tf.Session() as sess:
-        with tf.variable_scope("global"):
-            a3client = A3Client(sess)
-            mcts = MCTSFactory.standard_mcts()
+            # a3client = A3Client(sess)
+            td_client = TDClient(sess)
+            mcts = MCTSFactory.td_mcts(td_client)
 
             state = MancalaEnv()
             try:
