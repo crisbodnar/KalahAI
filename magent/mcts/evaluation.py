@@ -3,7 +3,7 @@ from magent.side import Side
 
 
 def _cluster_towards_scoring_store(state, side) -> float:
-    """Favour holes that are closer to store. Mapped to value between [0, 1]"""
+    """Favour holes that are closer to store."""
     reward = 0
     for i in range(state.board.holes + 1, 1):
         seeds = state.board.get_seeds(side, i)
@@ -38,8 +38,16 @@ def _defend_seeds(state, side) -> int:
 
 
 def _scoring_store_diff(state, side) -> float:
-    """Calculates the differences between two stores. Mapped to value between [0, 1]"""
-    reward = state.board.get_seeds_in_store(side) - state.board.get_seeds_in_store(Side.opposite(side))
+    """Calculates the differences between two stores."""
+    our_seeds = state.board.get_seeds_in_store(side)
+    their_seeds = state.board.get_seeds_in_store(Side.opposite(side))
+
+    for i in range(1, state.board.holes + 1, 1):
+        our_seeds += state.board.get_seeds(state.side_to_move, i)
+        their_seeds += state.board.get_seeds_op(state.side_to_move, i)
+
+    reward = our_seeds - their_seeds
+
     return reward
 
 
