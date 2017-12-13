@@ -47,7 +47,7 @@ def select_child_with_maximum_action_value(node: AlphaNode) -> AlphaNode:
     return max(node.children, key=lambda child: child.calculate_action_value())
 
 
-def _uct_reward(root: Node, child: Node, exploration_constant: float = sqrt(2)) -> float:
+def _uct_reward(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:
     return (child.reward / child.visits) + (exploration_constant * sqrt(2 * log(root.visits) / child.visits))
 
 

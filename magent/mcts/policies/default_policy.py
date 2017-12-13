@@ -1,7 +1,7 @@
-import logging
-from random import choice
+import numpy as np
 
 from magent.mancala import MancalaEnv
+from magent.mcts.evaluation import evaluate_node
 from magent.mcts.graph.node import AlphaNode, Node
 from magent.move import Move
 from models.client import A3Client
@@ -18,11 +18,27 @@ class DefaultPolicy(object):
 class MonteCarloDefaultPolicy(DefaultPolicy):
     """MonteCarloDefaultPolicy plays the domain randomly from a given non-terminal state."""
 
+    @staticmethod
+    def _make_temp_child(parent: Node, move: Move) -> MancalaEnv:
+        child_state = MancalaEnv.clone(parent.state)
+        child_state.perform_move(move)
+        return child_state
+
     def simulate(self, root: Node) -> MancalaEnv:
         node = Node.clone(root)
         while not node.is_terminal():
-            legal_move = choice(node.state.get_legal_moves())
-            node.state.perform_move(legal_move)
+            legal_moves = node.state.get_legal_moves()
+            moves = [-1e80 for _ in range(node.state.board.holes + 1)]
+            for move in legal_moves:
+                moves[move.index] = evaluate_node(state=self._make_temp_child(node, move),
+                                                  parent_side=node.state.side_to_move)
+
+            moves_dist = np.asarray(moves, dtype=np.float64).flatten()
+            exp = np.exp(moves_dist - np.max(moves_dist))
+            dist = exp / np.sum(exp)
+
+            move_to_make = int(np.random.choice(range(len(moves)), p=dist))
+            node.state.perform_move(Move(side=node.state.side_to_move, index=move_to_make))
 
         return node.state
 

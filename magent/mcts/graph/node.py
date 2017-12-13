@@ -31,13 +31,6 @@ class Node(object):
         for child in self.children:
             self.value = max(self.value, child.value)
 
-    def _make_temp_child(self, move: Move) -> MancalaEnv:
-        child_state = MancalaEnv.clone(self.state)
-        child_state.perform_move(move)
-        return child_state
-
-    # def rave_update(self):
-
     def is_fully_expanded(self) -> bool:
         """ is_fully_expanded returns true if there are no more moves to explore. """
         return len(self.unexplored_moves) == 0
