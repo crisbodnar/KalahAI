@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import tensorflow as tf
@@ -11,10 +12,11 @@ from magent.protocol.msg_type import MsgType
 from models.client import A3Client
 
 # set up logging to file - see previous section for more details
+logfile_name = datetime.datetime.now().strftime('kalah_%H_%M_%d_%m_%Y.log')
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M',
-                    filename='/tmp/kalah/main.log',
+                    filename='./logs/' + logfile_name,
                     filemode='w')
 
 

@@ -24,6 +24,6 @@ class TestBoard(unittest.TestCase):
 
     def test_mcts_test_game(self):
         state = MancalaEnv()
-        mcts = MCTSFactory.long_test_mcts(sec=600)  # Tweak this to test MCTS manually
+        mcts = MCTSFactory.long_test_mcts(sec=0)  # Tweak this to test MCTS manually
         move = mcts.search(state)
         print(move)
