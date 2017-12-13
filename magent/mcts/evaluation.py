@@ -18,7 +18,7 @@ def _defend_seeds(state, side) -> int:
     # full_round_capture: moves that do a full round around the board and capture our exposed holes
     full_round_capture, capture_by_lower_index, capture_by_greater_index = 0, 0, 0
 
-    for i in range(start=1, stop=state.board.holes + 1, step=1):
+    for i in range(1, state.board.holes + 1, 1):
         if state.board.get_seeds_op(side, i) == 0 and state.board.get_seeds(side, i) != 0:
             exposed_holes.append(i)
         # how many can do a full round to do a capture
@@ -27,7 +27,7 @@ def _defend_seeds(state, side) -> int:
 
     # how many exposed hole can be captured in next move
     for exposed_hole_index in exposed_holes:
-        for i in range(start=1, stop=state.board.holes + 1, step=1):
+        for i in range(1, state.board.holes + 1, 1):
             if state.board.get_seeds_op(side, i) == exposed_hole_index - i and state.board.get_seeds_op(side, i) != 0:
                 capture_by_lower_index = max(capture_by_lower_index, state.board.get_seeds(side, i))
 
