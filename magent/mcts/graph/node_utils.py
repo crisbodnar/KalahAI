@@ -69,5 +69,5 @@ def _uct_rave_reward(root: Node, child: Node, exploration_constant: float = 1 / 
     return _rave_reward(child) + (exploration_constant * sqrt(2 * log(root.visits) / child.visits))
 
 
-def _rave_reward(node: Node, alpha: float = 0.3) -> float:
+def _rave_reward(node: Node, alpha: float = 0.5) -> float:
     return (1 - alpha) * (node.reward / node.visits) + alpha * node.value

@@ -9,9 +9,7 @@ def _cluster_towards_scoring_store(state, side) -> float:
         seeds = state.board.get_seeds(side, i)
         if seeds > 0:
             reward += seeds * i
-    total_seeds_in_game = 98.0
-    max_reward = 7.0 * total_seeds_in_game
-    return reward / max_reward
+    return reward
 
 
 def _defend_seeds(state, side) -> int:
@@ -36,15 +34,13 @@ def _defend_seeds(state, side) -> int:
             if state.board.get_seeds_op(side, i) == 2 * state.board.holes + 1 - (i - exposed_hole_index):
                 capture_by_greater_index = max(capture_by_greater_index, state.board.get_seeds(side, i) + 1)
 
-    return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index)) / 98.0
+    return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index))
 
 
 def _scoring_store_diff(state, side) -> float:
     """Calculates the differences between two stores. Mapped to value between [0, 1]"""
     reward = state.board.get_seeds_in_store(side) - state.board.get_seeds_in_store(Side.opposite(side))
-    total_seeds_in_game = 98.0
-
-    return ((reward / total_seeds_in_game) + 1) / 2
+    return reward
 
 
 # Sum of weights should be 1
