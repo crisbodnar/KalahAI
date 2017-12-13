@@ -4,7 +4,7 @@
 
 
 
-for value in {165..380}
+for value in {1..5000}
 do
   java -jar ManKalah.jar "java -jar test_agents/JimmyPlayer.jar" "python3 magent/observer_agent.py -r ${value} -c north-jimmy-"&
   java -jar ManKalah.jar "java -jar test_agents/error404.jar" "python3 magent/observer_agent.py -r ${value} -c north-error404-"&
