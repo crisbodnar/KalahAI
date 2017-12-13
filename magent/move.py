@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from magent.side import Side
 
 
@@ -9,6 +11,9 @@ class Move(object):
 
         self._side = side
         self._index = index
+
+    def clone(self):
+        return deepcopy(self)
 
     @property
     def side(self) -> Side:
@@ -31,6 +36,3 @@ class Move(object):
 
     def __repr__(self) -> str:
         return "Side: %s; Hole: %d" % (Side.side_to_str(self.side), self.index)
-
-
-

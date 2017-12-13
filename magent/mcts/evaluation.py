@@ -48,12 +48,13 @@ def _scoring_store_diff(state, side) -> float:
 
 
 # Sum of weights should be 1
-_weight_store_diff = 0.6
+_weight_store_diff = 1
 _weight_defend_seeds = 0.3
 _weight_cluster_at_store = 0.1
 
 
 def evaluate_node(state: MancalaEnv, parent_side: Side) -> float:
-    return (_scoring_store_diff(state, parent_side) * _weight_store_diff) \
-           + (_cluster_towards_scoring_store(state, state.side_to_move) * _weight_defend_seeds) \
-           - (_defend_seeds(state, state.side_to_move) / _weight_defend_seeds)
+    return _scoring_store_diff(state, parent_side) * _weight_store_diff
+    # \
+    #        + (_cluster_towards_scoring_store(state, state.side_to_move) * _weight_defend_seeds) \
+    #        - (_defend_seeds(state, state.side_to_move) / _weight_defend_seeds)
