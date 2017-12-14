@@ -1,7 +1,7 @@
 import numpy as np
 
 from magent.mancala import MancalaEnv
-from magent.mcts.evaluation import evaluate_node
+from magent.mcts import evaluation
 from magent.mcts.graph.node import AlphaNode, Node
 from magent.move import Move
 from models.client import A3Client
@@ -30,8 +30,8 @@ class MonteCarloDefaultPolicy(DefaultPolicy):
             legal_moves = node.state.get_legal_moves()
             moves = [-1e80 for _ in range(node.state.board.holes + 1)]
             for move in legal_moves:
-                moves[move.index] = evaluate_node(state=self._make_temp_child(node, move),
-                                                  parent_side=node.state.side_to_move)
+                moves[move.index] = evaluation.get_score(state=self._make_temp_child(node, move),
+                                                         parent_side=node.state.side_to_move)
 
             moves_dist = np.asarray(moves, dtype=np.float64).flatten()
             exp = np.exp(moves_dist - np.max(moves_dist))

@@ -36,10 +36,19 @@ class MancalaEnv(object):
     def north_moved(self, moved: bool):
         self._north_moved = moved
 
+    @property
+    def our_side(self):
+        return self._my_side
+
+    @our_side.setter
+    def our_side(self, side: Side):
+        self._my_side = side
+
     def reset(self):
         self.board = Board(7, 7)
         self.side_to_move = Side.SOUTH
         self.north_moved = False
+        self.our_side = Side.SOUTH
 
     @staticmethod
     def clone(other_state):
@@ -62,6 +71,8 @@ class MancalaEnv(object):
     def perform_move(self, move: Move) -> int:
         """Performs a move and returns the reward for this move."""
         seeds_in_store_before = self.board.get_seeds_in_store(move.side)
+        if move.index == 0:  # pie move
+            self.our_side = Side.opposite(self.our_side)
         self.side_to_move = MancalaEnv.make_move(self.board, move, self.north_moved)
         if move.side == Side.NORTH:
             self.north_moved = True

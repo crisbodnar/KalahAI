@@ -9,6 +9,7 @@ from magent.mcts.mcts import MCTSFactory
 from magent.move import Move
 from magent.protocol.invalid_message_exception import InvalidMessageException
 from magent.protocol.msg_type import MsgType
+from magent.side import Side
 from models.client import A3Client
 
 # set up logging to file - see previous section for more details
@@ -18,17 +19,6 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M',
                     filename='./logs/' + logfile_name,
                     filemode='w')
-
-
-# define a Handler which writes INFO messages or higher to the sys.stderr
-# console = logging.StreamHandler()
-# console.setLevel(logging.DEBUG)
-# # set a format which is simpler for console use
-# formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-# # tell the handler to use this format
-# console.setFormatter(formatter)
-# # add the handler to the root logger
-# logging.getLogger('').addHandler(console)
 
 
 def main(_):
@@ -55,6 +45,8 @@ def _run_game(mcts, state):
                 if first:
                     move = mcts.search(state)
                     protocol.send_msg(protocol.create_move_msg(move.index))
+                else:
+                    state.our_side = Side.NORTH
             elif msg_type == MsgType.STATE:
                 move_turn = protocol.interpret_state_msg(msg)
                 state.perform_move(Move(state.side_to_move, move_turn.move))
@@ -77,5 +69,17 @@ def _run_game(mcts, state):
             logging.error(str(e))
 
 
+def mcts_main():
+    mcts = MCTSFactory.standard_mcts()
+    state = MancalaEnv()
+    try:
+        _run_game(mcts, state)
+    except Exception as e:
+        logging.error("Uncaught exception in main: " + str(e))
+        # TODO uncomment before release: Default to reasonable move behaviour on failure
+        # protocol.send_msg(protocol.create_move_msg(choice(state.get_legal_moves())))
+
+
 if __name__ == '__main__':
-    tf.app.run()
+    # tf.app.run()
+    mcts_main()

@@ -21,7 +21,7 @@ def select_max_child(node: Node) -> Node:
         raise ValueError('Selecting max child from unexpanded node')
     elif len(node.children) == 1:
         return node.children[0]
-    return max(node.children, key=lambda child: child.reward / (child.visits))
+    return max(node.children, key=lambda child: child.reward / child.visits)
 
 
 def select_robust_child(node: Node) -> Node:
@@ -65,8 +65,8 @@ def rave_selection(node: Node) -> Node:
     return max(node.children, key=lambda child: _uct_rave_reward(node, child))
 
 
-def _uct_rave_reward(root: Node, child: Node, exploration_constant: float = 1 / sqrt(2)) -> float:
-    return _rave_reward(child) + (exploration_constant * sqrt(2 * log(root.visits) / child.visits))
+def _uct_rave_reward(root: Node, child: Node, exploration_constant: float = 0.5) -> float:
+    return _rave_reward(child) + (exploration_constant * sqrt(log(root.visits) / child.visits))
 
 
 def _rave_reward(node: Node, alpha: float = 0.5) -> float:

@@ -3,7 +3,7 @@ from random import choice
 import numpy as np
 
 from magent.mancala import MancalaEnv
-from magent.mcts.evaluation import evaluate_node
+from magent.mcts import evaluation
 from magent.mcts.graph import node_utils
 from magent.mcts.graph.node import AlphaNode, Node
 from magent.move import Move
@@ -41,18 +41,18 @@ class MonteCarloTreePolicy(TreePolicy):
         child_state.perform_move(child_expansion_move)
         child_node = Node(state=child_state, move=child_expansion_move, parent=parent)
         parent.put_child(child_node)
-        MonteCarloTreePolicy.rave_expand(child_node)
+        MonteCarloTreePolicy._rave_expand(child_node)
         # go down the tree
         return child_node
 
     @staticmethod
-    def rave_expand(parent: Node):
+    def _rave_expand(parent: Node):
         moves = [-1e80 for _ in range(parent.state.board.holes + 1)]
         for unexplored_move in parent.unexplored_moves.copy():
             child_state = MancalaEnv.clone(parent.state)
             child_state.perform_move(unexplored_move)
-            moves[unexplored_move.index] = evaluate_node(state=child_state,
-                                                         parent_side=parent.state.side_to_move)
+            moves[unexplored_move.index] = evaluation.get_score(state=child_state,
+                                                                parent_side=parent.state.side_to_move)
 
         moves_dist = np.asarray(moves, dtype=np.float64).flatten()
         exp = np.exp(moves_dist - np.max(moves_dist))
