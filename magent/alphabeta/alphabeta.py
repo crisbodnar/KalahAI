@@ -5,6 +5,7 @@ from magent.mancala import MancalaEnv
 from magent.side import Side
 import numpy as np
 
+
 # logfile_name = 'here.log'
 # logging.basicConfig(level=logging.DEBUG,
 #                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -16,10 +17,6 @@ import numpy as np
 def alpha_beta_search(game: MancalaEnv, alpha=-np.inf, beta=np.inf, depth=5):
     """Search game to determine best action; use alpha-beta pruning.
     This version cuts off search and uses an evaluation function."""
-    # print(game)
-    #
-    # print('-=================================')
-
     if depth == 0 or game.is_game_over():
         return game.get_player_utility()
 
@@ -40,8 +37,8 @@ def alpha_beta_search(game: MancalaEnv, alpha=-np.inf, beta=np.inf, depth=5):
     return v
 
 
-def search_action(game: MancalaEnv, depth=3):
-    values = [(a, alpha_beta_search(state)) for a, state in game.next_states()]
+def search_action(game: MancalaEnv, depth: int):
+    values = [(a, alpha_beta_search(game=state, depth=depth)) for a, state in game.next_states()]
     np.random.shuffle(values)
 
     if game.side_to_move == Side.SOUTH:
