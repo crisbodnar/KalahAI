@@ -50,7 +50,7 @@ class MCTSFactory(object):
         return MCTS(tree_policy=MonteCarloTreePolicy(),
                     default_policy=MonteCarloDefaultPolicy(),
                     rollout_policy=MonteCarloRollOutPolicy(),
-                    time_sec=20)
+                    time_sec=40)
 
     @staticmethod
     def test_mcts() -> MCTS:
