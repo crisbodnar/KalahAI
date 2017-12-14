@@ -8,6 +8,7 @@ public class Kalah {
      * The board to play on.
      */
     private final Board board;
+    private boolean northMoved;
 
     /**
      * @param board The board to play on.

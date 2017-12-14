@@ -1,14 +1,15 @@
 import datetime
 import logging
+
 import tensorflow as tf
 
 import magent.protocol.protocol as protocol
 from magent.mancala import MancalaEnv
-from magent.mcts.mcts import MCTSFactory
 from magent.move import Move
 from magent.protocol.invalid_message_exception import InvalidMessageException
 from magent.protocol.msg_type import MsgType
 from magent.side import Side
+from magent.treesearch.factory import TreesFactory
 from models.client import A3Client
 
 # set up logging to file - see previous section for more details
@@ -24,7 +25,7 @@ def main(_):
     with tf.Session() as sess:
         with tf.variable_scope("global"):
             a3client = A3Client(sess)
-            mcts = MCTSFactory.alpha_mcts(a3client)
+            mcts = TreesFactory.alpha_mcts(a3client)
             state = MancalaEnv()
             try:
                 _run_game(mcts, state)
@@ -69,7 +70,7 @@ def _run_game(mcts, state):
 
 
 def mcts_main():
-    mcts = MCTSFactory.standard_mcts()
+    mcts = TreesFactory.standard_mcts()
     state = MancalaEnv()
     try:
         _run_game(mcts, state)

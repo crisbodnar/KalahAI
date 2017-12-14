@@ -1,5 +1,5 @@
 from magent.mancala import MancalaEnv
-from magent.mcts.graph.node import Node
+from magent.treesearch.mcts.graph.node import Node
 from models.client import A3Client
 
 

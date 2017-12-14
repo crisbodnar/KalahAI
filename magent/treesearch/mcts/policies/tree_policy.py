@@ -3,10 +3,10 @@ from random import choice
 import numpy as np
 
 from magent.mancala import MancalaEnv
-from magent.mcts import evaluation
-from magent.mcts.graph import node_utils
-from magent.mcts.graph.node import AlphaNode, Node
 from magent.move import Move
+from magent.treesearch import evaluation
+from magent.treesearch.mcts.graph import node_utils
+from magent.treesearch.mcts.graph.node import Node, AlphaNode
 from models.client import A3Client
 
 

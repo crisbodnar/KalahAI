@@ -1,6 +1,6 @@
 from math import log, sqrt
 
-from magent.mcts.graph.node import AlphaNode, Node
+from magent.treesearch.mcts.graph.node import Node, AlphaNode
 
 
 def select_best_child(node: Node) -> Node:

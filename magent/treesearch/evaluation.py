@@ -4,7 +4,7 @@ from magent.side import Side
 
 def _cluster_towards_scoring_store(state: MancalaEnv, parent_side: Side) -> float:
     """Favour holes that are closer to store."""
-    reward = 0
+    reward = 0.0
     for i in range(state.board.holes + 1, 1):
         seeds = state.board.get_seeds(parent_side, i)
         if seeds > 0:
@@ -59,9 +59,9 @@ def _scoring_store_diff(state: MancalaEnv, parent_side: Side) -> int:
     return reward
 
 
-_weight_store_diff = 3
-_weight_cluster_at_store = 5
-_weight_defend_seeds = 20
+_weight_store_diff = 3.0
+_weight_cluster_at_store = 5.0
+_weight_defend_seeds = 20.0
 
 
 def evaluate_node(state: MancalaEnv, parent_side: Side) -> float:
@@ -70,8 +70,8 @@ def evaluate_node(state: MancalaEnv, parent_side: Side) -> float:
            + (_cluster_towards_scoring_store(state, parent_side) / _weight_cluster_at_store)
 
 
-_weight_kalah_location = 8
-_weight_extra_turn = 4
+_weight_kalah_location = 8.0
+_weight_extra_turn = 4.0
 _weight_capture_weight = 0.5
 
 
