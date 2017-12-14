@@ -104,6 +104,7 @@ public class Board extends Observable implements Cloneable {
      */
     @Override
     public Board clone() throws CloneNotSupportedException {
+        super.clone();
         return new Board(this);
     }
 

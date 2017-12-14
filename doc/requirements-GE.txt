@@ -21,7 +21,7 @@ REQ5: The engine measures the average response time of each agent.
       {PROBLEM: An evil agent can attack its opponent by using a lot of CPU
       while it's idle.}
 REQ6: Initially (at the beginning of a match), there's the same amount of seeds
-      in each hole of the board.
+      in each index of the board.
 
 
 -------------

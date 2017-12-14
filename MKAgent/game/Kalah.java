@@ -1,5 +1,8 @@
 package MKAgent.game;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * This class deals with moves on a Kalah board.
  */
@@ -8,16 +11,49 @@ public class Kalah {
      * The board to play on.
      */
     private final Board board;
+    private Side sideToMove;
     private boolean northMoved;
+
+    public Kalah(int holes, int seeds) {
+        this.board = new Board(holes, seeds);
+        this.sideToMove = Side.SOUTH;
+        this.northMoved = false;
+    }
 
     /**
      * @param board The board to play on.
      * @throws NullPointerException if "board" is null.
      */
-    public Kalah(Board board) throws NullPointerException {
+    public Kalah(Board board, Side sideToMove, boolean north_moved) throws NullPointerException {
         if (board == null)
             throw new NullPointerException();
         this.board = board;
+        this.sideToMove = sideToMove;
+        this.northMoved = north_moved;
+    }
+
+    public Kalah(Kalah other) throws NullPointerException, CloneNotSupportedException {
+        if (other == null) {
+            throw new NullPointerException();
+        }
+
+        this.board = other.getBoard().clone();
+        this.sideToMove = other.getSideToMove();
+        this.northMoved = other.northMoved;
+    }
+
+    public Kalah clone() {
+        try {
+            return new Kalah(this);
+        } catch (CloneNotSupportedException e) {
+            // This should not happen
+            System.out.print("Cloning of kalah failed");
+            return null;
+        }
+    }
+
+    public List<Move> getLegalMoves() {
+        return Kalah.getLegalMoves(this.board, this.sideToMove, this.northMoved);
     }
 
     /**
@@ -35,7 +71,7 @@ public class Kalah {
      * @return true if the move is legal, false if not.
      */
     public boolean isLegalMove(Move move) {
-        return isLegalMove(board, move);
+        return isLegalMove(this.board, move, this.northMoved);
     }
 
     /**
@@ -53,7 +89,11 @@ public class Kalah {
      * @see java.util.Observable#notifyObservers(Object)
      */
     public Side makeMove(Move move) {
-        return makeMove(board, move);
+        this.sideToMove = makeMove(board, move);
+        if(move.getSide() == Side.NORTH) {
+            this.northMoved = false;
+        }
+        return this.sideToMove;
     }
 
     /**
@@ -73,10 +113,17 @@ public class Kalah {
      * @param move  The move to check.
      * @return true if the move is legal, false if not.
      */
-    public static boolean isLegalMove(Board board, Move move) {
+    public static boolean isLegalMove(Board board, Move move, boolean northMoved) {
+        if(move.getIndex() == 0) {
+            return !(northMoved || move.getSide() == Side.SOUTH);
+        }
         // check if the hole is existent and non-empty:
-        return (move.getHole() <= board.getNoOfHoles())
-                && (board.getSeeds(move.getSide(), move.getHole()) != 0);
+        return (move.getIndex() <= board.getNoOfHoles())
+                && (board.getSeeds(move.getSide(), move.getIndex()) != 0);
+    }
+
+    public Side getSideToMove() {
+        return this.sideToMove;
     }
 
     /**
@@ -90,7 +137,7 @@ public class Kalah {
      * @param move  The move to make.
      * @return The side who's turn it is after the move. Arbitrary if the
      * game is over.
-     * @see #isLegalMove(Board, Move)
+     * @see #isLegalMove(Board, Move, boolean)
      * @see #gameOver(Board)
      * @see java.util.Observable#notifyObservers(Object)
      */
@@ -113,10 +160,20 @@ public class Kalah {
 		    	collects the most counters is the winner."
 		*/
 
+        // This is a move to swap sides
+        if (move.getIndex() == 0) {
+            for(int i = 0; i <= board.getNoOfHoles(); i++) {
+                int tmp = board.getSeeds(Side.SOUTH, i);
+                board.setSeeds(Side.SOUTH, i, board.getSeeds(Side.NORTH, i));
+                board.setSeeds(Side.NORTH, i, tmp);
+            }
+            return move.getSide().opposite();
+        }
+
 
         // pick seeds:
-        int seedsToSow = board.getSeeds(move.getSide(), move.getHole());
-        board.setSeeds(move.getSide(), move.getHole(), 0);
+        int seedsToSow = board.getSeeds(move.getSide(), move.getIndex());
+        board.setSeeds(move.getSide(), move.getIndex(), 0);
 
         int holes = board.getNoOfHoles();
         int receivingPits = 2 * holes + 1;  // sow into: all holes + 1 store
@@ -136,7 +193,7 @@ public class Kalah {
 
         // sow the extra seeds (last round):
         Side sowSide = move.getSide();
-        int sowHole = move.getHole();  // 0 means store
+        int sowHole = move.getIndex();  // 0 means store
         for (; extra > 0; extra--) {
             // go to next pit:
             sowHole++;
@@ -219,6 +276,46 @@ public class Kalah {
         // The game is over if one of the agents can't make another move.
 
         return holesEmpty(board, Side.NORTH) || holesEmpty(board, Side.SOUTH);
+    }
+
+    private static List<Move> getLegalMoves(Board board, Side side, boolean northMoved) {
+        List<Move> legal_moves = new ArrayList<>();
+        for(int index = 0; index <= board.getNoOfHoles(); index++) {
+            Move move = new Move(side, index);
+            if (Kalah.isLegalMove(board, move, northMoved))
+                legal_moves.add(move);
+        }
+        return legal_moves;
+    }
+
+    public List<MoveStatePair> getNextMoveStatePairs() {
+        List<MoveStatePair> moveStatePairs = new ArrayList<>();
+        List<Move> legalMoves = this.getLegalMoves();
+        for(Move move:legalMoves) {
+            Kalah newState = this.clone();
+            newState.makeMove(move);
+            moveStatePairs.add(new MoveStatePair(move, newState));
+        }
+        return moveStatePairs;
+    }
+
+    public static class MoveStatePair {
+        private final Move move;
+        private final Kalah state;
+
+        MoveStatePair(Move move, Kalah state) {
+            this.state = state;
+            this.move = move;
+        }
+
+        public Move getMove() {
+            return this.move;
+        }
+
+        public Kalah getState() {
+            return this.state;
+        }
+
     }
 }
 

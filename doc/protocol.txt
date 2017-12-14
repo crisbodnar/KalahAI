@@ -48,7 +48,7 @@ Messages from the game engine to the agent (game engine -> agent):
      where n is the number of holes per side.
 
      A move i (with 1 <= i <= n) means a move which starts by picking the seeds
-     of hole number i (of the player that made the move). Holes are numbered
+     of index number i (of the player that made the move). Holes are numbered
      per side, starting with 1 on "the left" (i.e. furthest away from the
      player's store, the numbers increase in playing direction).
 
@@ -62,12 +62,12 @@ Messages from the game engine to the agent (game engine -> agent):
 
      This gives the state of the board after the move. Informally, <STATE> is a
      comma separated list of 2*(n+1) natural numbers. Each number gives the
-     number of seeds in a particular hole or store:
+     number of seeds in a particular index or store:
      - the first n numbers describe the holes of the North side, starting with
-       hole 1,
+       index 1,
      - the next number describes the Northern store,
      - the next n numbers describe the holes of the South side, starting with
-       hole 1,
+       index 1,
      - the next (and last) number describes the Southern store.
 
   <TURN> ::= "YOU" | "OPP" | "END"
@@ -111,7 +111,7 @@ Messages from the agent to the game engine (agent -> game engine):
      where n is the number of holes per side.
 
      A move i (with 1 <= i <= n) means a move which starts by picking the seeds
-     of (the agent's) hole number i. Holes are numbered per side, starting with
+     of (the agent's) index number i. Holes are numbered per side, starting with
      1 on "the left" (i.e. furthest away from the player's store, the numbers
      increase in playing direction).
 

@@ -9,24 +9,24 @@ public class Move {
      */
     private final Side side;
     /**
-     * The hole from which seeds are picked at the beginning of the move and
+     * The index from which seeds are picked at the beginning of the move and
      * distributed. It has to be >= 1.
      */
-    private final int hole;
+    private final int index;
 
 
     /**
      * @param side The side of the board the player making the move is playing
      *             on.
-     * @param hole The hole from which seeds are picked at the beginning of
+     * @param index The index from which seeds are picked at the beginning of
      *             the move and distributed. It has to be >= 1.
-     * @throws IllegalArgumentException if the hole number is not >= 1.
+     * @throws IllegalArgumentException if the index number is not >= 1.
      */
-    public Move(Side side, int hole) throws IllegalArgumentException {
-        if (hole < 1)
-            throw new IllegalArgumentException("Hole numbers must be >= 1, but " + hole + " was given.");
+    public Move(Side side, int index) throws IllegalArgumentException {
+        if (index < 0)
+            throw new IllegalArgumentException("Hole numbers must be >= 1, but " + index + " was given.");
         this.side = side;
-        this.hole = hole;
+        this.index = index;
     }
 
     /**
@@ -37,10 +37,10 @@ public class Move {
     }
 
     /**
-     * @return The hole from which seeds are picked at the beginning of the
+     * @return The index from which seeds are picked at the beginning of the
      * move and distributed. It will be >= 1.
      */
-    public int getHole() {
-        return hole;
+    public int getIndex() {
+        return index;
     }
 }

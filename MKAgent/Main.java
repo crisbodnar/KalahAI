@@ -75,7 +75,7 @@ public class Main {
                             boolean first = Protocol.interpretStartMsg(msg);
                             if (first) {
                                 Move move = treeSearch.getBestMove(board, ourSide);
-                                sendMsg(Protocol.createMoveMsg(move.getHole()));
+                                sendMsg(Protocol.createMoveMsg(move.getIndex()));
                             } else {
                                 ourSide = Side.NORTH;
                             }
@@ -90,7 +90,7 @@ public class Main {
                             if (move_turn.again) {
                                 // out turn again
                                 Move move = treeSearch.getBestMove(board, ourSide);
-                                sendMsg(Protocol.createMoveMsg(move.getHole()));
+                                sendMsg(Protocol.createMoveMsg(move.getIndex()));
                             }
                             System.err.print("The board:\n" + board);
                             break;
