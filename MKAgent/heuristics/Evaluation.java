@@ -14,10 +14,10 @@ public class Evaluation implements Heuristic {
     };
 
     @Override
-    public int score(Board board, Side side) {
+    public int getScore(Board board, Side side) {
         int score = 0;
         for(Heuristic heuristic:heuristics) {
-            score += heuristic.score(board, side);
+            score += heuristic.getScore(board, side);
         }
         return score;
     }

@@ -5,7 +5,7 @@ import MKAgent.game.Side;
 
 public class SeedsAwayFromStore implements Heuristic {
     @Override
-    public int score(Board board, Side side) {
+    public int getScore(Board board, Side side) {
         return getSeedsAwayFromStoreOnSide(board, side) - getSeedsAwayFromStoreOnSide(board, side.opposite());
     }
 

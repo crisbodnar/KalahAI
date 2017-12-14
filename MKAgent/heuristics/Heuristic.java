@@ -4,5 +4,5 @@ import MKAgent.game.Board;
 import MKAgent.game.Side;
 
 public interface Heuristic {
-    int score(Board board, Side side);
+    int getScore(Board board, Side side);
 }

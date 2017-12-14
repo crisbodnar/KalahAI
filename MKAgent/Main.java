@@ -1,12 +1,11 @@
 package MKAgent;
 
 import MKAgent.game.Board;
-import MKAgent.game.Move;
 import MKAgent.game.Side;
 import MKAgent.protocol.InvalidMessageException;
 import MKAgent.protocol.MsgType;
 import MKAgent.protocol.Protocol;
-import MKAgent.treesearch.AlphaBeta;
+import MKAgent.treesearch.AlphaBetaTree;
 import MKAgent.treesearch.TreeSearch;
 
 import java.io.*;
@@ -26,7 +25,7 @@ public class Main {
      *
      * @param msg The message.
      */
-    public static void sendMsg(String msg) {
+    private static void sendMsg(String msg) {
         System.out.print(msg);
         System.out.flush();
     }
@@ -38,7 +37,7 @@ public class Main {
      * @return The message.
      * @throws IOException if there has been an I/O error.
      */
-    public static String recvMsg() throws IOException {
+    private static String recvMsg() throws IOException {
         StringBuilder message = new StringBuilder();
         int newCharacter;
 
@@ -62,7 +61,8 @@ public class Main {
             String msg;
             Board board = new Board(7, 7);
             Side ourSide = Side.SOUTH;
-            TreeSearch treeSearch = new AlphaBeta();
+            boolean canSwap = false;
+            TreeSearch treeSearch = new AlphaBetaTree();
             while (true) {
                 System.err.println();
                 msg = recvMsg();
@@ -74,10 +74,11 @@ public class Main {
                             System.err.println("A start.");
                             boolean first = Protocol.interpretStartMsg(msg);
                             if (first) {
-                                Move move = treeSearch.getBestMove(board, ourSide);
-                                sendMsg(Protocol.createMoveMsg(move.getIndex()));
+                                int bestMoveIndex = treeSearch.getBestMove(board, ourSide);
+                                sendMsg(Protocol.createMoveMsg(bestMoveIndex));
                             } else {
                                 ourSide = Side.NORTH;
+                                canSwap = true;
                             }
                             System.err.println("Starting player? " + first);
                             break;
@@ -89,8 +90,18 @@ public class Main {
                             System.err.println("Is it our turn again? " + move_turn.again);
                             if (move_turn.again) {
                                 // out turn again
-                                Move move = treeSearch.getBestMove(board, ourSide);
-                                sendMsg(Protocol.createMoveMsg(move.getIndex()));
+                                int move = treeSearch.getBestMove(board, ourSide);
+                                sendMsg(Protocol.createMoveMsg(move));
+                                // our turn
+                                if (canSwap) {
+                                    // always swap
+                                    sendMsg(Protocol.createSwapMsg());
+                                    ourSide = ourSide.opposite();
+                                    canSwap = false;
+                                    break;
+                                }
+                                int bestMoveIndex = treeSearch.getBestMove(board, ourSide);
+                                sendMsg(Protocol.createMoveMsg(bestMoveIndex));
                             }
                             System.err.print("The board:\n" + board);
                             break;
