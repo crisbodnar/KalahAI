@@ -1,0 +1,45 @@
+TOURNAMENT ENGINE
+=================
+
+
+Behavioural & Architectural Requirements:
+
+TREQ1: The engine runs a tournament (of the Kalah game) using the/a provided
+       game engine application and agent applications. It can start the other
+       applications.
+TREQ2: A new instance of an agent is used for each of its matches.
+       {note: If an agent doesn't respond in a match, it can still continue in
+       the tournament.}
+TREQ3: In the tournament, each agent plays each other agent, once as the
+       starting player and once as the second player.
+TREQ4: Only the agents currenty playing a match are running.
+       {note: This is to make time measurements a bit fairer.}
+
+
+-------------
+
+Statistics About an Agent's Matches:
+
+- number of matches won
+- score ?
+- average response time per move/match ?
+- average number of moves per (won) match ?
+- number of timeouts ?
+
+
+-------------
+
+Phases of a Tournament:
+
+1. tournament phase (matches are played)
+2. evaluation phase (the results of the matches are evaluated, a statistics is
+   given)
+
+-------------
+
+Ranking:
+
+The agents are ranked using:
+  1. the number of matches won
+  2. the average response time per move (and match)
+(in that order).

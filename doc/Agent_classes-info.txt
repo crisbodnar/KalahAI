@@ -1,0 +1,6 @@
+The "Main" class is the starting point for the agent application. It also
+provides methods for sending messages to the game engine and receiving messages
+from it. The protocol (syntax) is implemented in the "Protocol" class.
+
+The state of the board is represented by "Board", while "Kalah" provides the
+logic for making moves.

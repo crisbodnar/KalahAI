@@ -1,0 +1,22 @@
+Initially, the game engine sends a message to each player, informing them
+whether they are the starting or the second player ("new match, 1st" and "new
+match, 2nd" respectively). Each time a player makes a move ("move"), the game
+engine informs *both* players about the move, the resulting state of the board
+and who's turn it is next ("state, you" or "state, opponent"). When a move ends
+the game (regularly), this is indicated in the state message, too ("state,
+end"). The second player may choose to swap positions as their first move
+("swap"). The opponent gets informed about the swap in a state message ("state,
+you [swap]") while the swapping player doesn't receive any kind of response
+message.
+
+The game engine indicates the end of a match by sending a "game over" message,
+which tells the agents to terminate. In case the match ended regularly (with a
+finishing move), there will have been a "state, end" message before. A match
+can also be aborted, however, e.g. if an agent sends an illegal message or
+times out. Therefore, a "game over" message can occur at any time.
+
+
+Remark: There is no special message informing a player that the opponent chose
+*not* to swap. Instead, they will directly receive a state message for the
+opponent's move. This is indicated by the transition ("[no swap]") from "wait
+for swap decision" to "wait for state" which doesn't carry a message.
