@@ -9,6 +9,7 @@ from magent.mcts.policies.rollout_policy import AlphaGoRollOutPolicy, MonteCarlo
 from magent.mcts.policies.tree_policy import AlphaGoTreePolicy, MonteCarloTreePolicy, TreePolicy
 from magent.move import Move
 from models.client import A3Client
+from magent.alphabeta.alphabeta import alpha_beta_search
 
 
 class MCTS(object):
@@ -20,24 +21,26 @@ class MCTS(object):
         self.calculation_time: datetime.timedelta = datetime.timedelta(seconds=time_sec)
 
     def search(self, state: MancalaEnv) -> Move:
-        # short circuit last move
-        if len(state.get_legal_moves()) == 1:
-            return state.get_legal_moves()[0]
-
-        game_state_root = Node(state=MancalaEnv.clone(state))
-        start_time = datetime.datetime.utcnow()
-        games_played = 0
-        while datetime.datetime.utcnow() - start_time < self.calculation_time:
-            node = self.tree_policy.select(game_state_root)
-            final_state = self.default_policy.simulate(node)
-            self.rollout_policy.backpropagate(node, final_state)
-            # Debugging information
-            games_played += 1
-            logging.debug("%s; Game played %i" % (node, games_played))
-        logging.debug("%s" % game_state_root)
-        chosen_child = node_utils.select_robust_child(game_state_root)
-        logging.info("Choosing: %s" % chosen_child)
-        return chosen_child.move
+        # # short circuit last move
+        # if len(state.get_legal_moves()) == 1:
+        #     return state.get_legal_moves()[0]
+        #
+        # game_state_root = Node(state=MancalaEnv.clone(state))
+        # start_time = datetime.datetime.utcnow()
+        # games_played = 0
+        # while datetime.datetime.utcnow() - start_time < self.calculation_time:
+        #     node = self.tree_policy.select(game_state_root)
+        #     final_state = self.default_policy.simulate(node)
+        #     self.rollout_policy.backpropagate(node, final_state)
+        #     # Debugging information
+        #     games_played += 1
+        #     logging.debug("%s; Game played %i" % (node, games_played))
+        # logging.debug("%s" % game_state_root)
+        # chosen_child = node_utils.select_robust_child(game_state_root)
+        # logging.info("Choosing: %s" % chosen_child)
+        # return chosen_child.move
+        node = alpha_beta_search(state, depth=3)
+        return node
 
 
 class MCTSFactory(object):

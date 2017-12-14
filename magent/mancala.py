@@ -251,6 +251,28 @@ class MancalaEnv(object):
             return move.side  # Last seed was placed in the store, so side moves again
         return Side.opposite(move.side)
 
+    def get_player_utility(self) -> int:
+        # delta_defend = _defend_seeds(self, Side.SOUTH) - _defend_seeds(self, Side.NORTH)
+        # more_than_half_in_store_south = 1000 if self.board.get_seeds_in_store(Side.SOUTH) / 98.0 > 0.5 else 0
+        # more_than_half_in_store_north = 1000 if self.board.get_seeds_in_store(Side.NORTH) / 98.0 > 0.5 else 0
+
+        store_score = compute_store_score(self)
+        capture_score = compute_score_capture_by(self, Side.SOUTH) - compute_score_capture_by(self, Side.NORTH)
+        double_move_score = compute_double_moves_score(self, Side.SOUTH) - compute_double_moves_score(self, Side.NORTH)
+        delta_side_score = compute_seeds_on_side(self, Side.SOUTH) - compute_seeds_on_side(self, Side.NORTH)
+
+        return store_score + capture_score + double_move_score + delta_side_score
+
+    def next_states(self):
+        actions = self.get_legal_moves()
+
+        next_states = []
+        for action in actions:
+            clone = MancalaEnv.clone(self)
+            clone.perform_move(action)
+            next_states.append((action, clone))
+        return next_states
+
     def __hash__(self) -> int:
         primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
                   101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163]
@@ -262,3 +284,67 @@ class MancalaEnv(object):
             hashkey += primes[2 + hole] * self.board.board[0][hole]
             hashkey += primes[10 + hole] * self.board.board[1][hole]
         return hashkey
+
+    def __str__(self):
+        return "%s" % self.board
+
+
+def _defend_seeds(state, side) -> int:
+    # exposed_holes: Holes that we have and are exposed to be captured by opponent
+    exposed_holes = []
+    # full_round_capture: moves that do a full round around the board and capture our exposed holes
+    full_round_capture, capture_by_lower_index, capture_by_greater_index = 0, 0, 0
+
+    for i in range(state.board.holes + 1, 1):
+        if state.board.get_seeds_op(side, i) != 0 and state.board.get_seeds(side, i) == 0:
+            exposed_holes.append(i)
+        # how many can do a full round to do a capture
+        if state.board.get_seeds_op(side, i) == 2 * state.board.holes + 1:
+            full_round_capture += state.board.get_seeds(side, i) + 1
+
+    # how many exposed hole can be captured in next move
+    for exposed_hole_index in exposed_holes:
+        for i in range(state.board.holes + 1, 1):
+            if state.board.get_seeds_op(side, i) == exposed_hole_index - i and state.board.get_seeds_op(side,
+                                                                                                        i) != 0:
+                capture_by_lower_index = max(capture_by_lower_index, state.board.get_seeds(side, i))
+
+            if state.board.get_seeds_op(side, i) == 2 * state.board.holes + 1 - (i - exposed_hole_index):
+                capture_by_greater_index = max(capture_by_greater_index, state.board.get_seeds(side, i) + 1)
+
+    return max(full_round_capture, max(capture_by_lower_index, capture_by_greater_index))
+
+
+def compute_store_score(game):
+    max_store = max(game.board.get_seeds_in_store(Side.SOUTH), game.board.get_seeds_in_store(Side.NORTH))
+    min_store = min(game.board.get_seeds_in_store(Side.SOUTH), game.board.get_seeds_in_store(Side.NORTH))
+    score = 2 * max_store - min_store
+    if max_store == game.board.get_seeds_in_store(Side.NORTH):
+        score *= -1
+    return score
+
+
+def compute_score_capture_by(game, side: Side):
+    board = game.board
+    score = 0
+    for hole in range(1, board.holes + 1):
+        if board.get_seeds(side, hole) == 0 and board.is_seedable(side, hole):
+            score += board.get_seeds_op(side, hole) / 2
+    return score
+
+
+def compute_double_moves_score(game, side: Side):
+    board = game.board
+    score = 0
+    for hole in range(1, board.holes + 1):
+        if board.holes + 1 - hole == board.get_seeds(side, hole):
+            score += 1
+    return score
+
+
+def compute_seeds_on_side(game, side: Side):
+    board = game.board
+    seeds = 0
+    for hole in range(1, board.holes + 1):
+        seeds += board.get_seeds(side, hole)
+    return seeds

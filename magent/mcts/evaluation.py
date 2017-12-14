@@ -44,7 +44,6 @@ def _stones_in_holes_diff(state: MancalaEnv, parent_side: Side) -> int:
     for i in range(1, state.board.holes + 1, 1):
         our_seeds += state.board.get_seeds(parent_side, i)
         their_seeds += state.board.get_seeds_op(parent_side, i)
-
     reward = our_seeds - their_seeds
 
     return reward

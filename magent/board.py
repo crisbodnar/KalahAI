@@ -93,6 +93,12 @@ class Board(object):
             return np.reshape(np.array(self.get_flipped_board()), (2, 8, 1))
         return np.reshape(np.array(self.board), (2, 8, 1))
 
+    def is_seedable(self, side: Side, hole: int) -> bool:
+        for other_hole in range(hole - 1, 0):
+            if self.get_seeds(side, other_hole) == hole - other_hole:
+                return True
+        return False
+
     def __str__(self):
         board_str = str(self.board[Side.get_index(Side.NORTH)][0]) + " --"
         for i in range(self.holes, 0, -1):
