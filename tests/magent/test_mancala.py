@@ -2,6 +2,7 @@ import unittest
 from magent.mancala import MancalaEnv
 from magent.side import Side
 from magent.move import Move
+from magent.alphabeta.alphabeta import search_action
 
 
 class TestMancalaGameState(unittest.TestCase):
@@ -93,5 +94,20 @@ class TestMancalaGameState(unittest.TestCase):
 
     def test_side_to_move_doesnt_change(self):
         self.game.perform_move(Move(Side.SOUTH, 1))
-        print(self.game.side_to_move)
         self.assertEqual(self.game.side_to_move, Side.NORTH)
+
+    def test_alphbeta(self):
+        board = self.game.board
+        for hole in range(1, self.game.board.holes + 1):
+            board.set_seeds(Side.SOUTH, hole, 0)
+            board.set_seeds(Side.NORTH, hole, 0)
+        board.set_seeds_in_store(Side.SOUTH, 0)
+        board.set_seeds_in_store(Side.NORTH, 0)
+
+        board.set_seeds(Side.SOUTH, 3, 1)
+        board.set_seeds(Side.SOUTH, 2, 4)
+        board.set_seeds_op(Side.SOUTH, 4, 5)
+        print(self.game)
+        print(search_action(self.game))
+
+

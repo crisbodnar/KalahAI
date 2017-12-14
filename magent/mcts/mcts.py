@@ -9,7 +9,7 @@ from magent.mcts.policies.rollout_policy import AlphaGoRollOutPolicy, MonteCarlo
 from magent.mcts.policies.tree_policy import AlphaGoTreePolicy, MonteCarloTreePolicy, TreePolicy
 from magent.move import Move
 from models.client import A3Client
-from magent.alphabeta.alphabeta import alpha_beta_search
+from magent.alphabeta.alphabeta import alpha_beta_search, search_action
 
 
 class MCTS(object):
@@ -39,8 +39,7 @@ class MCTS(object):
         # chosen_child = node_utils.select_robust_child(game_state_root)
         # logging.info("Choosing: %s" % chosen_child)
         # return chosen_child.move
-        node = alpha_beta_search(state, depth=3)
-        return node
+        return search_action(state, depth=5)
 
 
 class MCTSFactory(object):

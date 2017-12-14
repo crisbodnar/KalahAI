@@ -259,7 +259,14 @@ class MancalaEnv(object):
         store_score = compute_store_score(self)
         capture_score = compute_score_capture_by(self, Side.SOUTH) - compute_score_capture_by(self, Side.NORTH)
         double_move_score = compute_double_moves_score(self, Side.SOUTH) - compute_double_moves_score(self, Side.NORTH)
-        delta_side_score = compute_seeds_on_side(self, Side.SOUTH) - compute_seeds_on_side(self, Side.NORTH)
+        delta_side_score = (compute_seeds_on_side(self, Side.SOUTH) - compute_seeds_on_side(self, Side.NORTH)) / 2
+
+        # print(self)
+        # print(store_score)
+        # print(capture_score)
+        # print(double_move_score)
+        # print(delta_side_score)
+        # print('==================================')
 
         return store_score + capture_score + double_move_score + delta_side_score
 
@@ -316,6 +323,10 @@ def _defend_seeds(state, side) -> int:
 
 
 def compute_store_score(game):
+    if game.board.get_seeds_in_store(Side.SOUTH) == 0 and game.board.get_seeds_in_store(Side.NORTH) == 0:
+        return 0
+    if game.board.get_seeds_in_store(Side.SOUTH) == game.board.get_seeds_in_store(Side.NORTH) == 0:
+        return 0
     max_store = max(game.board.get_seeds_in_store(Side.SOUTH), game.board.get_seeds_in_store(Side.NORTH))
     min_store = min(game.board.get_seeds_in_store(Side.SOUTH), game.board.get_seeds_in_store(Side.NORTH))
     score = 2 * max_store - min_store

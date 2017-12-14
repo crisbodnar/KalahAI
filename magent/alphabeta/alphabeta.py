@@ -5,74 +5,47 @@ from magent.mancala import MancalaEnv
 from magent.side import Side
 import numpy as np
 
-logfile_name = 'here.log'
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M',
-                    filename='./logs/' + logfile_name,
-                    filemode='w')
+# logfile_name = 'here.log'
+# logging.basicConfig(level=logging.DEBUG,
+#                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+#                     datefmt='%m-%d %H:%M',
+#                     filename='./logs/' + logfile_name,
+#                     filemode='w')
 
 
-def alpha_beta_search(game: MancalaEnv, depth=5):
+def alpha_beta_search(game: MancalaEnv, alpha=-np.inf, beta=np.inf, depth=5):
     """Search game to determine best action; use alpha-beta pruning.
     This version cuts off search and uses an evaluation function."""
-    
-    infinity = 100000000
+    # print(game)
+    #
+    # print('-=================================')
 
-    def max_value(_state: MancalaEnv, alpha: int, beta: int, _depth: int) -> int:
-        assert _state.side_to_move == Side.SOUTH
-        if cutoff_test(_state, _depth):
-            return _state.get_player_utility()
-        v = alpha
-        for (_, _s) in _state.next_states():
-            if _s.side_to_move == Side.SOUTH:
-                v = max(v, max_value(_s, alpha, beta, _depth + 1))
-            else:
-                v = max(v, min_value(_s, alpha, beta, _depth + 1))
-            alpha = max(alpha, v)
-            if beta <= alpha:
-                return v
-        return v
+    if depth == 0 or game.is_game_over():
+        return game.get_player_utility()
 
-    def min_value(_state, alpha, beta, _depth):
-        assert _state.side_to_move == Side.NORTH
-        if cutoff_test(_state, _depth):
-            return _state.get_player_utility()
-
-        v = beta
-        for (_, _s) in _state.next_states():
-            if _s.side_to_move == Side.NORTH:
-                v = min(v, min_value(_s, alpha, beta, _depth + 1))
-            else:
-                v = min(v, max_value(_s, alpha, beta, _depth + 1))
-            beta = min(beta, v)
-            if beta <= alpha:
-                return v
-        return v
-
-    value_next_states = []
-    for a, s in game.next_states():
-        if s.side_to_move == Side.SOUTH:
-            value_next_states.append((a, max_value(s, -infinity, infinity, 0)))
-        else:
-            value_next_states.append((a, min_value(s, -infinity, infinity, 0)))
-
-    logging.info("Values: %s" % value_next_states)
     if game.side_to_move == Side.SOUTH:
-        maximum = -infinity
-        act = None
-        for action, val in value_next_states:
-            if val > maximum:
-                maximum = val
-                act = action
-        logging.info("Maximum: %d" % maximum)
-        return act
+        v = -np.inf
+        for (_, new_s) in game.next_states():
+            v = max(v, alpha_beta_search(new_s, alpha, beta, depth - 1))
+            alpha = max(alpha, v)
+            # if beta <= alpha:
+            #     break
     else:
-        minimum = infinity
-        act = None
-        for action, val in value_next_states:
-            if val < minimum:
-                minimum = val
-                act = action
-        logging.info("Minimum: %d" % minimum)
-        return act
+        v = np.inf
+        for (_, new_s) in game.next_states():
+            v = min(v, alpha_beta_search(new_s, alpha, beta, depth - 1))
+            beta = min(beta, v)
+            # if beta <= alpha:
+            #     break
+    return v
+
+
+def search_action(game: MancalaEnv, depth=3):
+    values = [(a, alpha_beta_search(state)) for a, state in game.next_states()]
+    np.random.shuffle(values)
+
+    if game.side_to_move == Side.SOUTH:
+        action, _ = max(values, key=lambda x: x[1])
+    else:
+        action, _ = min(values, key=lambda x: x[1])
+    return action
