@@ -1,6 +1,5 @@
 package MKAgent.protocol;
 
-import MKAgent.InvalidMessageException;
 import MKAgent.game.Board;
 import MKAgent.game.Side;
 

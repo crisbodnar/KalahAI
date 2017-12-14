@@ -1,14 +1,15 @@
 package MKAgent;
 
 import MKAgent.game.Board;
+import MKAgent.game.Move;
+import MKAgent.game.Side;
+import MKAgent.protocol.InvalidMessageException;
 import MKAgent.protocol.MsgType;
 import MKAgent.protocol.Protocol;
+import MKAgent.treesearch.AlphaBeta;
+import MKAgent.treesearch.TreeSearch;
 
-import java.io.BufferedReader;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 
 /**
  * The main application class. It also provides methods for communication
@@ -58,26 +59,39 @@ public class Main {
      */
     public static void main(String[] args) {
         try {
-            String s;
+            String msg;
             Board board = new Board(7, 7);
+            Side ourSide = Side.SOUTH;
+            TreeSearch treeSearch = new AlphaBeta();
             while (true) {
                 System.err.println();
-                s = recvMsg();
-                System.err.print("Received: " + s);
+                msg = recvMsg();
+                System.err.print("Received: " + msg);
                 try {
-                    MsgType mt = Protocol.getMessageType(s);
-                    switch (mt) {
+                    MsgType msgType = Protocol.getMessageType(msg);
+                    switch (msgType) {
                         case START:
                             System.err.println("A start.");
-                            boolean first = Protocol.interpretStartMsg(s);
+                            boolean first = Protocol.interpretStartMsg(msg);
+                            if (first) {
+                                Move move = treeSearch.getBestMove(board, ourSide);
+                                sendMsg(Protocol.createMoveMsg(move.getHole()));
+                            } else {
+                                ourSide = Side.NORTH;
+                            }
                             System.err.println("Starting player? " + first);
                             break;
                         case STATE:
                             System.err.println("A state.");
-                            Protocol.MoveTurn r = Protocol.interpretStateMsg(s, board);
-                            System.err.println("This was the move: " + r.move);
-                            System.err.println("Is the game over? " + r.end);
-                            if (!r.end) System.err.println("Is it our turn again? " + r.again);
+                            Protocol.MoveTurn move_turn = Protocol.interpretStateMsg(msg, board);
+                            System.err.println("This was the move: " + move_turn.move);
+                            System.err.println("Is the game over? " + move_turn.end);
+                            System.err.println("Is it our turn again? " + move_turn.again);
+                            if (move_turn.again) {
+                                // out turn again
+                                Move move = treeSearch.getBestMove(board, ourSide);
+                                sendMsg(Protocol.createMoveMsg(move.getHole()));
+                            }
                             System.err.print("The board:\n" + board);
                             break;
                         case END:
