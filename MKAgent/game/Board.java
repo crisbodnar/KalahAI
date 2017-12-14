@@ -1,5 +1,6 @@
 package MKAgent.game;
 
+import java.util.ArrayList;
 import java.util.Observable;
 
 /**
@@ -275,6 +276,20 @@ public class Board extends Observable implements Cloneable {
         boardString.append("--  " + board[SOUTH_ROW][0] + "\n");
 
         return boardString.toString();
+    }
+
+    // TODO CristianBodnar remove once we port to our classes
+    public ArrayList<Integer> getPossibleMoves(Side side) {
+        ArrayList<Integer> possibleMoves = new ArrayList<>();
+        int indexOfSide = indexOfSide(side);
+
+        for (int i = 1; i <= this.getNoOfHoles(); i++) {
+            if (this.board[indexOfSide][i] > 0) {
+                possibleMoves.add(i);
+            }
+        }
+
+        return possibleMoves;
     }
 }
 

@@ -70,7 +70,7 @@ def _run_game(mcts, state):
 
 
 def mcts_main():
-    mcts = TreesFactory.standard_mcts()
+    mcts = TreesFactory.alpha_beta()
     state = MancalaEnv()
     try:
         _run_game(mcts, state)

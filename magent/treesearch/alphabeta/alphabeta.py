@@ -11,7 +11,7 @@ class AlphaBeta(TreeSearch):
         self.depth = depth
 
     def search(self, game: MancalaEnv) -> Move:
-        values = [(a, self.alpha_beta_search(game=state, depth=self.depth)) for a, state in game.next_states()]
+        values = [(a, self._alpha_beta_search(game=state, depth=self.depth)) for a, state in game.next_states()]
         np.random.shuffle(values)
 
         if game.side_to_move == Side.SOUTH:

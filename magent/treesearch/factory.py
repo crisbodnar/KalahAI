@@ -40,4 +40,4 @@ class TreesFactory(object):
 
     @staticmethod
     def alpha_beta() -> TreeSearch:
-        return AlphaBeta(depth=7)
+        return AlphaBeta(depth=6)
