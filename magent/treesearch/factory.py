@@ -15,7 +15,7 @@ class TreesFactory(object):
         return MCTS(tree_policy=MonteCarloTreePolicy(),
                     default_policy=MonteCarloDefaultPolicy(),
                     rollout_policy=MonteCarloRollOutPolicy(),
-                    time_sec=40)
+                    time_sec=20)
 
     @staticmethod
     def test_mcts() -> TreeSearch:
@@ -40,4 +40,4 @@ class TreesFactory(object):
 
     @staticmethod
     def alpha_beta() -> TreeSearch:
-        return AlphaBeta(depth=6)
+        return AlphaBeta(depth=5)

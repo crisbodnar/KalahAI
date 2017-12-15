@@ -1,10 +1,11 @@
-package MKAgent.treesearch;
+package MKAgent.treesearch.alphabeta;
 
 import MKAgent.game.Board;
 import MKAgent.game.Kalah;
 import MKAgent.game.Move;
 import MKAgent.game.Side;
 import MKAgent.heuristics.Evaluation;
+import MKAgent.treesearch.TreeSearch;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -99,8 +100,8 @@ public class AlphaBetaTree implements TreeSearch {
 
 
     @Override
-    public int getBestMove(Board board, Side ourSide) {
-        return getBestMoveWithDepth(board, 7, ourSide);
+    public int getBestMove(Kalah state) {
+        return getBestMoveWithDepth(state.getBoard(), 7, state.getOurSide());
     }
 }
 

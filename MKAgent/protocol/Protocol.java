@@ -1,7 +1,6 @@
 package MKAgent.protocol;
 
 import MKAgent.game.Board;
-import MKAgent.game.Side;
 
 /**
  * Creates messages to be sent and interprets messages received.
@@ -96,17 +95,13 @@ public class Protocol {
      * Interprets a "state_change" message. Should be called if
      * getMessageType(msg) returns MsgType.STATE
      *
-     * @param msg   The message.
-     * @param board This is an output parameter. It will store the new state
-     *              of the Kalah board. The board has to have the right dimensions
-     *              (number of holes), otherwise an InvalidMessageException is
-     *              thrown.
+     * @param msg The message.
      * @return information about the move that led to the state change and
      * who's turn it is next.
      * @throws InvalidMessageException if the message is not well-formed.
      * @see #getMessageType(String)
      */
-    public static MoveTurn interpretStateMsg(String msg, Board board) throws InvalidMessageException {
+    public static MoveTurn interpretStateMsg(String msg) throws InvalidMessageException {
         MoveTurn moveTurn = new MoveTurn();
 
         if (msg.charAt(msg.length() - 1) != '\n')
@@ -120,7 +115,7 @@ public class Protocol {
 
         // 1st argument: the move (or swap)
         if (msgParts[1].equals("SWAP"))
-            moveTurn.move = -1;
+            moveTurn.move = 0;
         else {
             try {
                 moveTurn.move = Integer.parseInt(msgParts[1]);
@@ -128,32 +123,7 @@ public class Protocol {
                 throw new InvalidMessageException("Illegal value for move parameter: " + e.getMessage());
             }
         }
-
-        // 2nd argument: the board
-        String[] boardParts = msgParts[2].split(",", -1);
-        /*if (boardParts.length % 2 != 0)
-    		throw new InvalidMessageException("Malformed board: odd number of entries.");*/
-        if (2 * (board.getNoOfHoles() + 1) != boardParts.length)
-            throw new InvalidMessageException("Board dimensions in message ("
-                    + boardParts.length + " entries) are not as expected ("
-                    + 2 * (board.getNoOfHoles() + 1) + " entries).");
-        try {
-            // holes on the north side:
-            for (int i = 0; i < board.getNoOfHoles(); i++)
-                board.setSeeds(Side.NORTH, i + 1, Integer.parseInt(boardParts[i]));
-            // northern store:
-            board.setSeedsInStore(Side.NORTH, Integer.parseInt(boardParts[board.getNoOfHoles()]));
-            // holes on the south side:
-            for (int i = 0; i < board.getNoOfHoles(); i++)
-                board.setSeeds(Side.SOUTH, i + 1, Integer.parseInt(boardParts[i + board.getNoOfHoles() + 1]));
-            // southern store:
-            board.setSeedsInStore(Side.SOUTH, Integer.parseInt(boardParts[2 * board.getNoOfHoles() + 1]));
-        } catch (NumberFormatException e) {
-            throw new InvalidMessageException("Illegal value for seed count: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidMessageException("Illegal value for seed count: " + e.getMessage());
-        }
-
+        
         // 3rd argument: who's turn?
         moveTurn.end = false;
         if (msgParts[3].equals("YOU\n"))

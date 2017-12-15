@@ -1,45 +1,50 @@
 package MKAgent.game;
 
+import MKAgent.heuristics.Evaluation;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * This class deals with moves on a Kalah board.
  */
-public class Kalah {
+public class Kalah implements Cloneable {
     /**
      * The board to play on.
      */
     private final Board board;
     private Side sideToMove;
     private boolean northMoved;
+    private Side ourSide;
 
     public Kalah(int holes, int seeds) {
         this.board = new Board(holes, seeds);
         this.sideToMove = Side.SOUTH;
         this.northMoved = false;
+        this.ourSide = Side.SOUTH;
     }
 
     /**
      * @param board The board to play on.
      * @throws NullPointerException if "board" is null.
      */
-    public Kalah(Board board, Side sideToMove, boolean north_moved) throws NullPointerException {
+    public Kalah(Board board, Side sideToMove, boolean north_moved, Side ourSide) throws NullPointerException {
         if (board == null)
             throw new NullPointerException();
         this.board = board;
         this.sideToMove = sideToMove;
         this.northMoved = north_moved;
+        this.ourSide = ourSide;
     }
 
     public Kalah(Kalah other) throws NullPointerException, CloneNotSupportedException {
         if (other == null) {
             throw new NullPointerException();
         }
-
         this.board = other.getBoard().clone();
         this.sideToMove = other.getSideToMove();
         this.northMoved = other.northMoved;
+        this.ourSide = other.getOurSide();
     }
 
     public Kalah clone() {
@@ -47,9 +52,13 @@ public class Kalah {
             return new Kalah(this);
         } catch (CloneNotSupportedException e) {
             // This should not happen
-            System.out.print("Cloning of kalah failed");
+            System.err.print("Cloning of kalah failed");
             return null;
         }
+    }
+
+    public void setOurSide(Side ourSide) {
+        this.ourSide = ourSide;
     }
 
     public List<Move> getLegalMoves() {
@@ -62,6 +71,15 @@ public class Kalah {
     public Board getBoard() {
         return board;
     }
+
+
+    /**
+     * @return the side that represent our point of view
+     */
+    public Side getOurSide() {
+        return ourSide;
+    }
+
 
     /**
      * Checks whether a given move is legal on the underlying board. The move
@@ -89,11 +107,23 @@ public class Kalah {
      * @see java.util.Observable#notifyObservers(Object)
      */
     public Side makeMove(Move move) {
-        this.sideToMove = makeMove(board, move);
-        if(move.getSide() == Side.NORTH) {
-            this.northMoved = false;
+        if (isLegalMove(board, move, this.northMoved)) {
+            this.sideToMove = makeMove(board, move);
+            if (move.getIndex() == 0) {
+
+                this.ourSide = this.ourSide.opposite();
+            }
+            if (move.getSide() == Side.NORTH) {
+                this.northMoved = true;
+            }
+            return this.sideToMove;
+        } else {
+            throw new IllegalArgumentException("Illegal move attempted");
         }
-        return this.sideToMove;
+    }
+
+    public Side makeMove(int moveIndex) {
+        return makeMove(new Move(this.sideToMove, moveIndex));
     }
 
     /**
@@ -114,8 +144,8 @@ public class Kalah {
      * @return true if the move is legal, false if not.
      */
     public static boolean isLegalMove(Board board, Move move, boolean northMoved) {
-        if(move.getIndex() == 0) {
-            return !(northMoved || move.getSide() == Side.SOUTH);
+        if (move.getIndex() == 0) {
+            return !northMoved && move.getSide() == Side.NORTH;
         }
         // check if the hole is existent and non-empty:
         return (move.getIndex() <= board.getNoOfHoles())
@@ -159,10 +189,13 @@ public class Kalah {
 		    	which case the other player captures all remaining counters. The player who
 		    	collects the most counters is the winner."
 		*/
-
         // This is a move to swap sides
         if (move.getIndex() == 0) {
-            for(int i = 0; i <= board.getNoOfHoles(); i++) {
+            int seedsInSouthStore = board.getSeedsInStore(Side.SOUTH);
+            int seedsInNorthStore = board.getSeedsInStore(Side.NORTH);
+            board.setSeedsInStore(Side.SOUTH, seedsInNorthStore);
+            board.setSeedsInStore(Side.NORTH, seedsInSouthStore);
+            for (int i = 1; i <= board.getNoOfHoles(); i++) {
                 int tmp = board.getSeeds(Side.SOUTH, i);
                 board.setSeeds(Side.SOUTH, i, board.getSeeds(Side.NORTH, i));
                 board.setSeeds(Side.NORTH, i, tmp);
@@ -280,7 +313,7 @@ public class Kalah {
 
     private static List<Move> getLegalMoves(Board board, Side side, boolean northMoved) {
         List<Move> legal_moves = new ArrayList<>();
-        for(int index = 0; index <= board.getNoOfHoles(); index++) {
+        for (int index = 0; index <= board.getNoOfHoles(); index++) {
             Move move = new Move(side, index);
             if (Kalah.isLegalMove(board, move, northMoved))
                 legal_moves.add(move);
@@ -291,10 +324,11 @@ public class Kalah {
     public List<MoveStatePair> getNextMoveStatePairs() {
         List<MoveStatePair> moveStatePairs = new ArrayList<>();
         List<Move> legalMoves = this.getLegalMoves();
-        for(Move move:legalMoves) {
+        for (Move move : legalMoves) {
             Kalah newState = this.clone();
             newState.makeMove(move);
-            moveStatePairs.add(new MoveStatePair(move, newState));
+            double value = Evaluation.getScore(newState.getBoard(), this.sideToMove);
+            moveStatePairs.add(new MoveStatePair(move, newState, value));
         }
         return moveStatePairs;
     }
@@ -303,9 +337,16 @@ public class Kalah {
         private final Move move;
         private final Kalah state;
 
-        MoveStatePair(Move move, Kalah state) {
+        private final double value;
+
+        MoveStatePair(Move move, Kalah state, double value) {
             this.state = state;
             this.move = move;
+            this.value = value;
+        }
+
+        public double getValue() {
+            return value;
         }
 
         public Move getMove() {
@@ -315,6 +356,7 @@ public class Kalah {
         public Kalah getState() {
             return this.state;
         }
+
 
     }
 }

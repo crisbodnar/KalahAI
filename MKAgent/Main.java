@@ -1,12 +1,12 @@
 package MKAgent;
 
-import MKAgent.game.Board;
+import MKAgent.game.Kalah;
 import MKAgent.game.Side;
 import MKAgent.protocol.InvalidMessageException;
 import MKAgent.protocol.MsgType;
 import MKAgent.protocol.Protocol;
-import MKAgent.treesearch.AlphaBetaTree;
 import MKAgent.treesearch.TreeSearch;
+import MKAgent.treesearch.mcts.MonteCarlo;
 
 import java.io.*;
 
@@ -37,7 +37,7 @@ public class Main {
      * @return The message.
      * @throws IOException if there has been an I/O error.
      */
-    private static String recvMsg() throws IOException {
+    private static String recMsg() throws IOException {
         StringBuilder message = new StringBuilder();
         int newCharacter;
 
@@ -59,13 +59,10 @@ public class Main {
     public static void main(String[] args) {
         try {
             String msg;
-            Board board = new Board(7, 7);
-            Side ourSide = Side.SOUTH;
-            boolean canSwap = false;
-            TreeSearch treeSearch = new AlphaBetaTree();
+            Kalah state = new Kalah(7, 7);
+            TreeSearch treeSearch = new MonteCarlo();
             while (true) {
-                System.err.println();
-                msg = recvMsg();
+                msg = recMsg();
                 System.err.print("Received: " + msg);
                 try {
                     MsgType msgType = Protocol.getMessageType(msg);
@@ -74,36 +71,29 @@ public class Main {
                             System.err.println("A start.");
                             boolean first = Protocol.interpretStartMsg(msg);
                             if (first) {
-                                int bestMoveIndex = treeSearch.getBestMove(board, ourSide);
+                                int bestMoveIndex = treeSearch.getBestMove(state);
                                 sendMsg(Protocol.createMoveMsg(bestMoveIndex));
                             } else {
-                                ourSide = Side.NORTH;
-                                canSwap = true;
+                                state.setOurSide(Side.NORTH);
                             }
                             System.err.println("Starting player? " + first);
                             break;
                         case STATE:
                             System.err.println("A state.");
-                            Protocol.MoveTurn move_turn = Protocol.interpretStateMsg(msg, board);
+                            Protocol.MoveTurn move_turn = Protocol.interpretStateMsg(msg);
                             System.err.println("This was the move: " + move_turn.move);
                             System.err.println("Is the game over? " + move_turn.end);
                             System.err.println("Is it our turn again? " + move_turn.again);
+                            state.makeMove(move_turn.move);
                             if (move_turn.again) {
-                                // out turn again
-                                int move = treeSearch.getBestMove(board, ourSide);
-                                sendMsg(Protocol.createMoveMsg(move));
-                                // our turn
-                                if (canSwap) {
-                                    // always swap
+                                int bestMoveIndex = treeSearch.getBestMove(state);
+                                if (bestMoveIndex == 0) {
                                     sendMsg(Protocol.createSwapMsg());
-                                    ourSide = ourSide.opposite();
-                                    canSwap = false;
-                                    break;
+                                } else {
+                                    sendMsg(Protocol.createMoveMsg(bestMoveIndex));
                                 }
-                                int bestMoveIndex = treeSearch.getBestMove(board, ourSide);
-                                sendMsg(Protocol.createMoveMsg(bestMoveIndex));
                             }
-                            System.err.print("The board:\n" + board);
+                            System.err.print("The board:\n" + state.getBoard());
                             break;
                         case END:
                             System.err.println("An end. Bye bye!");

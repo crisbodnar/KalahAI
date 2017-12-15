@@ -1,4 +1,4 @@
-package MKAgent.treesearch;
+package MKAgent.treesearch.alphabeta;
 
 import MKAgent.game.Side;
 

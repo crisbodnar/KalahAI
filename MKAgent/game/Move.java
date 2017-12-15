@@ -16,10 +16,10 @@ public class Move {
 
 
     /**
-     * @param side The side of the board the player making the move is playing
-     *             on.
+     * @param side  The side of the board the player making the move is playing
+     *              on.
      * @param index The index from which seeds are picked at the beginning of
-     *             the move and distributed. It has to be >= 1.
+     *              the move and distributed. It has to be >= 1.
      * @throws IllegalArgumentException if the index number is not >= 1.
      */
     public Move(Side side, int index) throws IllegalArgumentException {
@@ -42,5 +42,13 @@ public class Move {
      */
     public int getIndex() {
         return index;
+    }
+
+    @Override
+    public String toString() {
+        return "Move{" +
+                "side=" + side +
+                ", index=" + index +
+                '}';
     }
 }
