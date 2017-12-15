@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import static MKAgent.treesearch.mcts.graph.MonteCarloNodeUtils.raveSelection;
+import static MKAgent.treesearch.mcts.graph.MonteCarloNodeUtils.selectBestChild;
 
 public class TreePolicyWithHeuristic implements TreePolicy {
     private final static Random randomiser = new Random();
@@ -20,7 +20,7 @@ public class TreePolicyWithHeuristic implements TreePolicy {
             if (!node.isFullyExpanded()) {
                 return expand(node);
             } else {
-                node = raveSelection(node);
+                node = selectBestChild(node);
             }
         }
         return node;

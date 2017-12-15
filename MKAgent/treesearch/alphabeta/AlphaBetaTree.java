@@ -12,11 +12,6 @@ import java.util.Collections;
 
 public class AlphaBetaTree implements TreeSearch {
     private int currentID = 0;
-    private Evaluation evaluation;
-
-    public AlphaBetaTree() {
-        this.evaluation = new Evaluation();
-    }
 
     public Tree buildTree(Board board, int depth, Side ourSide) {
         Node node = new Node(null, board, currentID, 0, null, ourSide, ourSide);
@@ -50,7 +45,7 @@ public class AlphaBetaTree implements TreeSearch {
                 }
             }
         } else {
-            double score = evaluation.getScore(root.board, root.nextMove);
+            double score = Evaluation.getScore(root.board, root.nextMove);
             if (root.nextMove != ourSide) {
                 score *= -1.0D;
             }

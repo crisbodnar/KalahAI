@@ -37,7 +37,7 @@ public class MonteCarlo implements TreeSearch {
         MonteCarloNode root = new MonteCarloNode(state.clone(), null, null);
         int gamesPlayed = 0;
         // TODO replace with time based budget
-        while (gamesPlayed < 10000) {
+        while (gamesPlayed < 75000) {
             MonteCarloNode node = treePolicy.select(root);
             Kalah finalState = defaultPolicy.simulate(node);
             rollOutPolicy.backpropagate(node, finalState);
