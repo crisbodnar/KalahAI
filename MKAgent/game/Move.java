@@ -1,5 +1,7 @@
 package MKAgent.game;
 
+import java.util.Objects;
+
 /**
  * Represents a move (not a turn) in the Kalah game.
  */
@@ -50,5 +52,20 @@ public class Move {
                 "side=" + side +
                 ", index=" + index +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object anotherMove) {
+        if (this == anotherMove) return true;
+        if (anotherMove == null || getClass() != anotherMove.getClass()) return false;
+        Move move = (Move) anotherMove;
+        return index == move.index &&
+                side == move.side;
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(side, index);
     }
 }

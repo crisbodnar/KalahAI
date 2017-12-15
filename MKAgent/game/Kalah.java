@@ -4,6 +4,7 @@ import MKAgent.heuristics.Evaluation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This class deals with moves on a Kalah board.
@@ -359,8 +360,23 @@ public class Kalah implements Cloneable {
         public Kalah getState() {
             return this.state;
         }
+    }
 
+    @Override
+    public boolean equals(Object anotherState) {
+        if (this == anotherState) return true;
+        if (anotherState == null || getClass() != anotherState.getClass()) return false;
+        Kalah anotherKalahState = (Kalah) anotherState;
+        return northMoved == anotherKalahState.northMoved &&
+                board.equals(anotherKalahState.board) &&
+                sideToMove.equals(anotherKalahState.sideToMove) &&
+                ourSide == anotherKalahState.ourSide;
+    }
 
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(board, sideToMove, northMoved, ourSide);
     }
 }
 

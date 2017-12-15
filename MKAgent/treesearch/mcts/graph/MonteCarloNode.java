@@ -10,7 +10,7 @@ import java.util.List;
 public class MonteCarloNode implements Cloneable {
     private final Kalah state;
     private final Move move;
-    private final MonteCarloNode parent;
+    private MonteCarloNode parent;
     private int visits;
     private double reward;
     private double heuristicValue;
@@ -124,6 +124,10 @@ public class MonteCarloNode implements Cloneable {
 
     public void setHeuristicValue(double heuristicValue) {
         this.heuristicValue = heuristicValue;
+    }
+
+    public void setParent(MonteCarloNode parent) {
+        this.parent = parent;
     }
 }
 

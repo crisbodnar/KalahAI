@@ -85,6 +85,7 @@ public class Main {
                             System.err.println("Is the game over? " + move_turn.end);
                             System.err.println("Is it our turn again? " + move_turn.again);
                             state.makeMove(move_turn.move);
+                            treeSearch.performMove(move_turn.move);
                             if (move_turn.again) {
                                 int bestMoveIndex = treeSearch.getBestMove(state);
                                 if (bestMoveIndex == 0) {

@@ -58,7 +58,10 @@ public class TreePolicyWithHeuristic implements TreePolicy {
             movesValue[i] = -1e80;
         }
         for (Kalah.MoveStatePair nextMoveStatePair : nextMoveStatePairs) {
-            movesValue[nextMoveStatePair.getMove().getIndex()] = nextMoveStatePair.getValue();
+            double value = nextMoveStatePair.getValue();
+            if (value != 0) {
+                movesValue[nextMoveStatePair.getMove().getIndex()] = value;
+            }
         }
 
         for (int i = 0; i < node.getState().getBoard().getNoOfHoles() + 1; i++) {

@@ -9,7 +9,7 @@ import MKAgent.treesearch.TreeSearch;
 
 import java.util.ArrayList;
 import java.util.Collections;
-
+// TODO Fix to use our kalah class
 public class AlphaBetaTree implements TreeSearch {
     private int currentID = 0;
 
@@ -29,7 +29,7 @@ public class AlphaBetaTree implements TreeSearch {
                 try {
                     Board board = root.board.clone();
                     Move move = new Move(root.nextMove, possibleMove);
-                    Side nextSideAfterMove = Kalah.makeMove(board, move);
+                    Side nextSideAfterMove = Kalah.makeMove(board, move, true);
                     Side nextOurSide = root.ourSide;
                     if (possibleMove == 8) {
                         nextOurSide = root.ourSide.opposite();
@@ -97,6 +97,11 @@ public class AlphaBetaTree implements TreeSearch {
     @Override
     public int getBestMove(Kalah state) {
         return getBestMoveWithDepth(state.getBoard(), 7, state.getOurSide());
+    }
+
+    @Override
+    public void performMove(int move) {
+        return; // TODO implement
     }
 }
 

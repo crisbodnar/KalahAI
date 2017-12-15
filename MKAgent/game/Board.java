@@ -1,6 +1,8 @@
 package MKAgent.game;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Observable;
 
 /**
@@ -277,6 +279,23 @@ public class Board extends Observable implements Cloneable {
         boardString.append("--  " + board[SOUTH_ROW][0] + "\n");
 
         return boardString.toString();
+    }
+
+    @Override
+    public boolean equals(Object anotherBoard) {
+        if (this == anotherBoard) return true;
+        if (anotherBoard == null || getClass() != anotherBoard.getClass()) return false;
+        Board board1 = (Board) anotherBoard;
+        return holes == board1.holes &&
+                Arrays.equals(board, board1.board);
+    }
+
+    @Override
+    public int hashCode() {
+
+        int result = Objects.hash(holes);
+        result = 31 * result + Arrays.hashCode(board);
+        return result;
     }
 
     // TODO CristianBodnar remove once we port to our classes
