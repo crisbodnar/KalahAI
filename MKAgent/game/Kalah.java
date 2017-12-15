@@ -108,7 +108,7 @@ public class Kalah implements Cloneable {
      */
     public Side makeMove(Move move) {
         if (isLegalMove(board, move, this.northMoved)) {
-            this.sideToMove = makeMove(board, move);
+            this.sideToMove = makeMove(board, move, this.northMoved);
             if (move.getIndex() == 0) {
 
                 this.ourSide = this.ourSide.opposite();
@@ -171,7 +171,7 @@ public class Kalah implements Cloneable {
      * @see #gameOver(Board)
      * @see java.util.Observable#notifyObservers(Object)
      */
-    public static Side makeMove(Board board, Move move) {
+    public static Side makeMove(Board board, Move move, boolean northMoved) {
         /* from the documentation:
 		  "1. The counters are lifted from this hole and sown in anti-clockwise direction, starting
 		      with the next hole. The player's own kalahah is included in the sowing, but the
@@ -279,7 +279,7 @@ public class Kalah implements Cloneable {
         board.notifyObservers(move);
 
         // who's turn is it?
-        if (sowHole == 0)  // the store (implies (sowSide == move.getSide()))
+        if (sowHole == 0 && (move.getSide() == Side.NORTH || northMoved))  // the store (implies (sowSide == move.getSide()))
             return move.getSide();  // move again
         else
             return move.getSide().opposite();
