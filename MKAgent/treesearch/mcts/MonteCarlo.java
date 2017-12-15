@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import static MKAgent.treesearch.mcts.graph.MonteCarloNodeUtils.selectRobustChild;
 
 public class MonteCarlo implements TreeSearch {
-    private static final int CUT_OFF_VISIT_DIFF = 1000;
+    private static final int CUT_OFF_VISIT_DIFF = 15000;
     private final TreePolicy treePolicy;
     private final DefaultPolicy defaultPolicy;
     private final RolloutPolicy rollOutPolicy;
@@ -45,9 +45,9 @@ public class MonteCarlo implements TreeSearch {
         // TODO replace with time based budget
         while (gamesPlayed < 100000) {
             // check every 500 games that we need to keep doing simulation or not
-            if (gamesPlayed % 500 == 0 && !continueSimulating()) {
-                break;
-            }
+//            if (gamesPlayed % 500 == 0 && !continueSimulating()) {
+//                break;
+//            }
             MonteCarloNode node = treePolicy.select(root);
             Kalah finalState = defaultPolicy.simulate(node);
             rollOutPolicy.backpropagate(node, finalState);
@@ -89,7 +89,7 @@ public class MonteCarlo implements TreeSearch {
                         .sorted(Comparator.comparing(MonteCarloNode::getVisits).reversed())
                         .collect(Collectors.toList());
 
-        return sortedChildren.get(0).getVisits() - CUT_OFF_VISIT_DIFF < sortedChildren.get(1).getVisits();
+        return sortedChildren.get(0).getVisits() - CUT_OFF_VISIT_DIFF <= sortedChildren.get(1).getVisits();
 
     }
 }
