@@ -34,7 +34,7 @@ public class TreePolicyWithHeuristic implements TreePolicy {
         childState.makeMove(move);
         MonteCarloNode childNode = new MonteCarloNode(childState, move, root);
         root.putChild(childNode);
-        raveValueExpansion(childNode);
+//        raveValueExpansion(childNode);
         return childNode;
     }
 
