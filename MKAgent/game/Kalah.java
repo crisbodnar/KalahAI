@@ -328,7 +328,7 @@ public class Kalah implements Cloneable {
         for (Move move : legalMoves) {
             Kalah newState = this.clone();
             Side nextSide = newState.makeMove(move);
-            double value = Evaluation.getScore(newState.getBoard(), this.sideToMove);
+            double value = Evaluation.evaluateState(newState);
             if (nextSide != ourSide) {
                 value *= -1.0D;
             }

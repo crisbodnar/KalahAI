@@ -98,6 +98,7 @@ public class MonteCarlo implements TreeSearch, Runnable {
         throw new InvalidRootStateException("No child with the same move was found");
     }
 
+    // TODO decide on values before plugging this back in
     private boolean continueSimulating() {
         if (root.getUnexploredMoves().size() > 0 ||
                 root.getChildren().size() < 2) {

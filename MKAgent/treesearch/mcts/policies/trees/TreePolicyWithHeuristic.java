@@ -34,38 +34,42 @@ public class TreePolicyWithHeuristic implements TreePolicy {
         childState.makeMove(move);
         MonteCarloNode childNode = new MonteCarloNode(childState, move, root);
         root.putChild(childNode);
-//        raveValueExpansion(childNode);
+        raveValueExpansion(childNode);
         return childNode;
     }
 
 
     private void raveValueExpansion(MonteCarloNode node) {
         if (node.getUnexploredMoves().size() == 0) {
-            node.setHeuristicValue(Evaluation.computeEndGameReward(node.getState(),
-                    node.getParent().getState().getSideToMove()));
+            node.setHeuristicValue(Evaluation.evaluateState(node.getState()));
             return;
         }
 
         List<Kalah.MoveStatePair> nextMoveStatePairs = node.getState().getNextMoveStatePairs();
-        double sumOfAllValues = nextMoveStatePairs.stream().mapToDouble(Kalah.MoveStatePair::getValue).sum();
-        double maxOfAllValues = nextMoveStatePairs.stream().mapToDouble(Kalah.MoveStatePair::getValue).max().getAsDouble();
 
         double[] dists = new double[node.getState().getBoard().getNoOfHoles() + 1];
+        double[] exps = new double[node.getState().getBoard().getNoOfHoles() + 1];
 
 
+        double maxOfAllValues = Double.MIN_VALUE;
         double[] movesValue = new double[node.getState().getBoard().getNoOfHoles() + 1];
         for (int i = 0; i < node.getState().getBoard().getNoOfHoles() + 1; i++) {
             movesValue[i] = -1e80;
         }
         for (Kalah.MoveStatePair nextMoveStatePair : nextMoveStatePairs) {
             double value = nextMoveStatePair.getValue();
-            if (value != 0) {
-                movesValue[nextMoveStatePair.getMove().getIndex()] = value;
-            }
+            movesValue[nextMoveStatePair.getMove().getIndex()] = value;
+            maxOfAllValues = Math.max(maxOfAllValues, value);
         }
 
-        for (int i = 0; i < node.getState().getBoard().getNoOfHoles() + 1; i++) {
-            dists[i] = Math.exp(movesValue[i] - maxOfAllValues) / sumOfAllValues;
+        double sumOfAllExps = 0.0;
+        for (int i = 0; i <= node.getState().getBoard().getNoOfHoles(); i++) {
+            exps[i] = Math.exp(movesValue[i] - maxOfAllValues);
+            sumOfAllExps += exps[i];
+        }
+
+        for (int i = 0; i <= node.getState().getBoard().getNoOfHoles(); i++) {
+            dists[i] = exps[i] / sumOfAllExps;
         }
 
         node.setHeuristicValue(Arrays.stream(dists).max().getAsDouble());
