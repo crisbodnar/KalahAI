@@ -95,12 +95,17 @@ public class AlphaBetaTree implements TreeSearch {
 
 
     @Override
-    public int getBestMove(Kalah state) {
-        return getBestMoveWithDepth(state.getBoard(), 7, state.getOurSide());
+    public int getBestMove() {
+        return 0;
     }
 
     @Override
     public void performMove(int move) {
+        return; // TODO implement
+    }
+
+    @Override
+    public void run() {
         return; // TODO implement
     }
 }

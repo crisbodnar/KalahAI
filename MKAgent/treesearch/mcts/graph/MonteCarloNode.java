@@ -55,9 +55,9 @@ public class MonteCarloNode implements Cloneable {
     public void update(double reward) {
         this.reward += reward;
         this.visits += 1;
-        for (MonteCarloNode child : children) {
-            this.heuristicValue = Math.max(child.heuristicValue, this.heuristicValue);
-        }
+//        for (MonteCarloNode child : children) {
+//            this.heuristicValue = Math.max(child.heuristicValue, this.heuristicValue);
+//        }
     }
 
     @Override

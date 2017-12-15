@@ -61,6 +61,8 @@ public class Main {
             String msg;
             Kalah state = new Kalah(7, 7);
             TreeSearch treeSearch = new MonteCarlo();
+            Thread t = new Thread(treeSearch);
+            t.start();
             while (true) {
                 msg = recMsg();
                 System.err.print("Received: " + msg);
@@ -71,7 +73,7 @@ public class Main {
                             System.err.println("A start.");
                             boolean first = Protocol.interpretStartMsg(msg);
                             if (first) {
-                                int bestMoveIndex = treeSearch.getBestMove(state);
+                                int bestMoveIndex = treeSearch.getBestMove();
                                 sendMsg(Protocol.createMoveMsg(bestMoveIndex));
                             } else {
                                 state.setOurSide(Side.NORTH);
@@ -87,7 +89,7 @@ public class Main {
                             state.makeMove(move_turn.move);
                             treeSearch.performMove(move_turn.move);
                             if (move_turn.again) {
-                                int bestMoveIndex = treeSearch.getBestMove(state);
+                                int bestMoveIndex = treeSearch.getBestMove();
                                 if (bestMoveIndex == 0) {
                                     sendMsg(Protocol.createSwapMsg());
                                 } else {

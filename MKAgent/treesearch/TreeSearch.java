@@ -1,9 +1,6 @@
 package MKAgent.treesearch;
 
-import MKAgent.game.Kalah;
-
-public interface TreeSearch {
-
-    int getBestMove(Kalah kalah);
+public interface TreeSearch extends Runnable{
+    int getBestMove();
     void performMove(int move);
 }
